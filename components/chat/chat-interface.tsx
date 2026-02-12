@@ -364,16 +364,16 @@ export function ChatInterface() {
           {/* Action bar */}
           {hasMinimumFields && (
             <div className="shrink-0 border-t border-border bg-card/80 backdrop-blur-sm px-4 py-3 lg:px-8">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex flex-col gap-0.5 min-w-0">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div className="hidden sm:flex flex-col gap-0.5 min-w-0">
                   <span className="text-sm font-semibold text-foreground truncate font-heading">
                     {quoteState.header.angebotstitel || "Angebot"}
                   </span>
-                  <span className="text-xs text-muted-foreground">
+                  <span className="text-xs text-muted-foreground truncate">
                     {totalPositions} Positionen -- {quoteState.header.unternehmensname}
                   </span>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex items-center gap-2 flex-wrap">
                   <Button
                     variant="outline"
                     size="sm"
@@ -389,7 +389,7 @@ export function ChatInterface() {
                     onClick={() => setShowPreview(true)}
                   >
                     <Eye className="h-4 w-4 mr-1.5" />
-                    <span className="hidden sm:inline">Vorschau</span>
+                    Vorschau
                   </Button>
                   <Button
                     size="sm"
@@ -397,7 +397,7 @@ export function ChatInterface() {
                     disabled={isGenerating}
                   >
                     <Download className="h-4 w-4 mr-1.5" />
-                    {isGenerating ? "Generiere..." : "Excel herunterladen"}
+                    {isGenerating ? "..." : "Excel"}
                   </Button>
                   <Button
                     size="sm"
@@ -405,7 +405,7 @@ export function ChatInterface() {
                     onClick={handleSendToSales}
                   >
                     <Mail className="h-4 w-4 mr-1.5" />
-                    <span className="hidden sm:inline">An Sales-Support</span>
+                    Sales
                   </Button>
                 </div>
               </div>
@@ -413,15 +413,15 @@ export function ChatInterface() {
           )}
 
           {/* Input */}
-          <div className="shrink-0 border-t border-border bg-background px-4 py-4 lg:px-8">
-            <div className="flex items-end gap-2">
-              <div className="flex-1">
+          <div className="shrink-0 border-t border-border bg-background px-4 py-3 pb-4 lg:px-8">
+            <div className="flex items-center gap-2">
+              <div className="flex-1 min-w-0">
                 <ChatInput onSend={sendMessage} onFileUpload={handleFileUpload} disabled={isLoading} />
               </div>
               <Button
                 variant="outline"
                 size="icon"
-                className="h-[52px] w-11 shrink-0 rounded-2xl border-primary/30 text-primary hover:bg-primary hover:text-primary-foreground transition-colors"
+                className="h-10 w-10 shrink-0 rounded-full border-primary/30 text-primary hover:bg-primary hover:text-primary-foreground transition-colors"
                 onClick={() => setShowVoiceAgent(true)}
                 aria-label="Voice Agent starten"
                 title="Voice Agent"
