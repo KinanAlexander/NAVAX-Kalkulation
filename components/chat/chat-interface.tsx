@@ -108,6 +108,8 @@ export function ChatInterface() {
   }, [demoMessages])
 
   // ---- Live mode: extract tool results from UIMessage parts ----
+  const processedToolIdsRef = React.useRef<Set<string>>(new Set())
+
   React.useEffect(() => {
     if (mode !== "live") return
     for (const msg of liveMessages) {
@@ -120,12 +122,17 @@ export function ChatInterface() {
         ) {
           const inv = (part as Record<string, unknown>).toolInvocation as {
             toolName: string
+            toolCallId?: string
             args: Record<string, unknown>
             state: string
             output?: Record<string, unknown>
           }
           if (inv.state === "output-available" && inv.output) {
-            applyToolResult(inv.toolName, inv.args, inv.output)
+            const uniqueId = inv.toolCallId || `${msg.id}_${inv.toolName}_${JSON.stringify(inv.args)}`
+            if (!processedToolIdsRef.current.has(uniqueId)) {
+              processedToolIdsRef.current.add(uniqueId)
+              applyToolResult(inv.toolName, inv.args, inv.output)
+            }
           }
         }
       }
@@ -154,9 +161,18 @@ export function ChatInterface() {
     quoteState.customerService.length
 
   // ---- Apply a single tool result to quoteState ----
+  // Track pending excel generation separately (side effects should not be inside state setters)
+  const pendingExcelRef = React.useRef(false)
+
   const applyToolResult = React.useCallback(
     (toolName: string, args: Record<string, unknown>, result: Record<string, unknown>) => {
       if (!result.success) return
+
+      // Handle generateExcel separately as a side effect (not inside state setter)
+      if (toolName === "generateExcel") {
+        pendingExcelRef.current = true
+        return
+      }
 
       setQuoteState((prev) => {
         let next = { ...prev }
@@ -278,20 +294,25 @@ export function ChatInterface() {
           }
         }
 
-        if (toolName === "generateExcel") {
-          // Schedule the Excel generation after state update completes
-          setTimeout(() => {
-            triggerExcelDownload()
-          }, 500)
-        }
-
         next.updatedAt = new Date().toISOString()
         return next
       })
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     []
   )
+
+  // Watch for pending Excel generation and trigger after state settles
+  React.useEffect(() => {
+    if (pendingExcelRef.current && !liveIsLoading) {
+      pendingExcelRef.current = false
+      // Give state time to settle, then trigger download
+      const timer = setTimeout(() => {
+        triggerExcelDownload()
+      }, 800)
+      return () => clearTimeout(timer)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [liveIsLoading, liveMessages])
 
   // ---- Apply batch tool results (demo mode) ----
   const applyToolResults = React.useCallback(
@@ -407,6 +428,8 @@ export function ChatInterface() {
     setQuoteState(createEmptyQuoteState())
     setShowMobilePanel(false)
     setShowPreview(false)
+    processedToolIdsRef.current.clear()
+    pendingExcelRef.current = false
   }
 
   const handleVoiceSend = React.useCallback(
