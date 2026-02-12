@@ -1,6 +1,5 @@
 "use client"
 
-import * as React from "react"
 import { cn } from "@/lib/utils"
 import {
   Sparkles,
@@ -12,6 +11,7 @@ import {
   Mic,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { useMode } from "@/lib/store/mode-context"
 
 interface QuickAction {
   icon: React.ElementType
@@ -63,6 +63,8 @@ interface WelcomeScreenProps {
 }
 
 export function WelcomeScreen({ onSelectAction, onStartVoiceAgent, disabled }: WelcomeScreenProps) {
+  const { mode } = useMode()
+
   return (
     <div className="flex min-h-full flex-col items-center justify-center px-4 py-16">
       <div className="w-full max-w-2xl flex flex-col items-center gap-8">
@@ -76,10 +78,28 @@ export function WelcomeScreen({ onSelectAction, onStartVoiceAgent, disabled }: W
               NAVAX Angebotskalkulation
             </h1>
             <p className="mt-2 max-w-md text-sm text-muted-foreground leading-relaxed">
-              Beschreibe dein Kundenmeeting in natuerlicher Sprache und ich erstelle
-              die vollstaendige Angebotskalkulation fuer dich.
+              {mode === "live"
+                ? "Live-Modus aktiv -- Beschreibe dein Kundenmeeting und die KI erstellt das Angebot in Echtzeit."
+                : "Demo-Modus -- Waehle ein Template oder starte den Voice Agent fuer eine Beispiel-Kalkulation."}
             </p>
           </div>
+          {/* Mode badge */}
+          <span
+            className={cn(
+              "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold",
+              mode === "live"
+                ? "bg-primary/10 text-primary ring-1 ring-primary/20"
+                : "bg-muted text-muted-foreground ring-1 ring-border"
+            )}
+          >
+            <span
+              className={cn(
+                "h-1.5 w-1.5 rounded-full",
+                mode === "live" ? "bg-primary animate-pulse" : "bg-muted-foreground/50"
+              )}
+            />
+            {mode === "live" ? "Live AI" : "Demo"}
+          </span>
         </div>
 
         {/* Voice Agent CTA */}

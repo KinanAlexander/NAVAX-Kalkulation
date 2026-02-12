@@ -2,6 +2,7 @@ import React from "react"
 import type { Metadata } from 'next'
 import { Inter, DM_Sans, JetBrains_Mono } from 'next/font/google'
 import { ThemeProvider } from "@/components/theme-provider"
+import { ModeProvider } from "@/lib/store/mode-context"
 import { Toaster } from "sonner"
 
 import './globals.css'
@@ -29,8 +30,10 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          {children}
-          <Toaster richColors position="top-right" />
+          <ModeProvider>
+            {children}
+            <Toaster richColors position="top-right" />
+          </ModeProvider>
         </ThemeProvider>
       </body>
     </html>

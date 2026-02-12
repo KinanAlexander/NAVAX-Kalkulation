@@ -1,6 +1,8 @@
 "use client"
 
 import * as React from "react"
+import { useChat } from "@ai-sdk/react"
+import { DefaultChatTransport } from "ai"
 import { ChatInput } from "./chat-input"
 import { MessageBubble } from "./message-bubble"
 import { QuoteProgressPanel } from "./quote-progress-panel"
@@ -12,9 +14,11 @@ import { VoiceAgentOverlay } from "@/components/voice/voice-agent-overlay"
 import { Button } from "@/components/ui/button"
 import { createEmptyQuoteState } from "@/lib/store/quote-store"
 import type { QuoteState } from "@/lib/store/types"
+import { useMode } from "@/lib/store/mode-context"
 import { toast } from "sonner"
 
-interface ChatMessage {
+// ---- shared message type for demo mode ----
+interface DemoChatMessage {
   id: string
   role: "user" | "assistant"
   text: string
@@ -25,32 +29,89 @@ interface ChatMessage {
   }>
 }
 
+// ---- Helper: extract text from UIMessage parts ----
+function getUIMessageText(msg: { parts?: Array<{ type: string; text?: string }> }): string {
+  if (!msg.parts || !Array.isArray(msg.parts)) return ""
+  return msg.parts
+    .filter((p): p is { type: "text"; text: string } => p.type === "text")
+    .map((p) => p.text)
+    .join("")
+}
+
 export function ChatInterface() {
-  const [messages, setMessages] = React.useState<ChatMessage[]>([])
+  const { mode } = useMode()
+
+  // ---- Shared state ----
   const [quoteState, setQuoteState] = React.useState<QuoteState>(createEmptyQuoteState)
-  const [isLoading, setIsLoading] = React.useState(false)
   const [isGenerating, setIsGenerating] = React.useState(false)
   const [showMobilePanel, setShowMobilePanel] = React.useState(false)
   const [showPreview, setShowPreview] = React.useState(false)
   const [showVoiceAgent, setShowVoiceAgent] = React.useState(false)
   const scrollRef = React.useRef<HTMLDivElement>(null)
 
+  // ---- Demo mode state ----
+  const [demoMessages, setDemoMessages] = React.useState<DemoChatMessage[]>([])
+  const [demoLoading, setDemoLoading] = React.useState(false)
+
+  // ---- Live mode: AI SDK useChat ----
+  const liveTransport = React.useMemo(
+    () => new DefaultChatTransport({ api: "/api/chat/live" }),
+    []
+  )
+  const {
+    messages: liveMessages,
+    sendMessage: liveSendMessage,
+    status: liveStatus,
+    setMessages: setLiveMessages,
+  } = useChat({ transport: liveTransport })
+
+  const liveIsLoading = liveStatus === "streaming" || liveStatus === "submitted"
+
+  // ---- Refs for demo mode ----
   const quoteStateRef = React.useRef(quoteState)
   React.useEffect(() => {
     quoteStateRef.current = quoteState
   }, [quoteState])
 
-  const messagesRef = React.useRef(messages)
+  const demoMessagesRef = React.useRef(demoMessages)
   React.useEffect(() => {
-    messagesRef.current = messages
-  }, [messages])
+    demoMessagesRef.current = demoMessages
+  }, [demoMessages])
 
+  // ---- Live mode: extract tool results from UIMessage parts ----
+  React.useEffect(() => {
+    if (mode !== "live") return
+    for (const msg of liveMessages) {
+      if (msg.role !== "assistant" || !msg.parts) continue
+      for (const part of msg.parts) {
+        if (
+          part.type === "tool-invocation" &&
+          "toolInvocation" in part &&
+          (part as Record<string, unknown>).toolInvocation
+        ) {
+          const inv = (part as Record<string, unknown>).toolInvocation as {
+            toolName: string
+            args: Record<string, unknown>
+            state: string
+            output?: Record<string, unknown>
+          }
+          if (inv.state === "output-available" && inv.output) {
+            applyToolResult(inv.toolName, inv.args, inv.output)
+          }
+        }
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [liveMessages, mode])
+
+  // ---- Scroll to bottom ----
   React.useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight
     }
-  }, [messages])
+  }, [demoMessages, liveMessages])
 
+  // ---- Computed ----
   const hasMinimumFields =
     !!quoteState.header.unternehmensname &&
     !!quoteState.header.angebotstitel &&
@@ -63,132 +124,128 @@ export function ChatInterface() {
     quoteState.solutions.length +
     quoteState.customerService.length
 
-  const applyToolResults = React.useCallback(
-    (toolResults: ChatMessage["toolResults"]) => {
-      if (!toolResults || toolResults.length === 0) return
+  // ---- Apply a single tool result to quoteState ----
+  const applyToolResult = React.useCallback(
+    (toolName: string, args: Record<string, unknown>, result: Record<string, unknown>) => {
+      if (!result.success) return
 
       setQuoteState((prev) => {
         let next = { ...prev }
 
-        for (const tr of toolResults) {
-          const result = tr.result as Record<string, unknown>
-          if (!result.success) continue
+        if (toolName === "setHeaderField") {
+          const field = (args.field || result.field) as string
+          const value = (args.value || result.value) as string
+          next = {
+            ...next,
+            header: { ...next.header, [field]: value },
+            customerName: field === "unternehmensname" ? value : next.customerName,
+            title: field === "angebotstitel" ? value : next.title,
+          }
+        }
 
-          if (tr.toolName === "setHeaderField") {
-            const field = tr.args.field as string
-            const value = tr.args.value as string
+        if (toolName === "addLicensePosition") {
+          const pos = result.position as Record<string, unknown>
+          const exists = next.licenses.some(
+            (l) => l.product === pos.product && l.category === pos.category
+          )
+          if (!exists) {
             next = {
               ...next,
-              header: { ...next.header, [field]: value },
-              customerName: field === "unternehmensname" ? value : next.customerName,
-              title: field === "angebotstitel" ? value : next.title,
+              licenses: [
+                ...next.licenses,
+                {
+                  id: `lic_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+                  category: pos.category as string,
+                  product: pos.product as string,
+                  quantity: pos.quantity as number,
+                  unitPrice: pos.unitPrice as number,
+                  discount: (pos.discount as number) || 0,
+                  total: pos.total as number,
+                  optional: (pos.optional as boolean) || false,
+                  articleNr: "",
+                },
+              ],
             }
           }
+        }
 
-          if (tr.toolName === "addLicensePosition") {
-            const pos = result.position as Record<string, unknown>
-            const exists = next.licenses.some(
-              (l) => l.product === pos.product && l.category === pos.category
-            )
-            if (!exists) {
-              next = {
-                ...next,
-                licenses: [
-                  ...next.licenses,
-                  {
-                    id: `lic_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-                    category: pos.category as string,
-                    product: pos.product as string,
-                    quantity: pos.quantity as number,
-                    unitPrice: pos.unitPrice as number,
-                    discount: (pos.discount as number) || 0,
-                    total: pos.total as number,
-                    optional: (pos.optional as boolean) || false,
-                    articleNr: "",
-                  },
-                ],
-              }
-            }
-          }
-
-          if (tr.toolName === "addServicePosition") {
-            const pos = result.position as Record<string, unknown>
-            const exists = next.services.some((s) => s.description === pos.description)
-            if (!exists) {
-              next = {
-                ...next,
-                services: [
-                  ...next.services,
-                  {
-                    id: `svc_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-                    category: pos.category as string,
-                    description: pos.description as string,
-                    unit: (pos.unit as "LT" | "STD") || "LT",
-                    quantity: pos.quantity as number,
-                    rate: pos.rate as number,
-                    discount: (pos.discount as number) || 0,
-                    total: pos.total as number,
-                    optional: (pos.optional as boolean) || false,
-                  },
-                ],
-              }
-            }
-          }
-
-          if (tr.toolName === "addSolutionPosition") {
-            const pos = result.position as Record<string, unknown>
-            const exists = next.solutions.some((s) => s.name === pos.name)
-            if (!exists) {
-              const priceMap: Record<number, number> = { 1: 540, 2: 1530, 3: 2680, 4: 0 }
-              next = {
-                ...next,
-                solutions: [
-                  ...next.solutions,
-                  {
-                    id: `sol_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-                    name: pos.name as string,
-                    priceCategory: pos.priceCategory as 1 | 2 | 3 | 4,
-                    flatRate: (pos.flatRate as number) || priceMap[(pos.priceCategory as number)] || 0,
-                    additionalDl: (pos.additionalDl as number) || 0,
-                    articleNr: "",
-                  },
-                ],
-              }
-            }
-          }
-
-          if (tr.toolName === "addCustomerServicePosition") {
-            const pos = result.position as Record<string, unknown>
-            const exists = next.customerService.some(
-              (c) => c.package === (pos.packageName || pos.package)
-            )
-            if (!exists) {
-              next = {
-                ...next,
-                customerService: [
-                  ...next.customerService,
-                  {
-                    id: `csv_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-                    package: (pos.packageName || pos.package) as string,
-                    description: pos.description as string,
-                    monthlyFee: pos.monthlyFee as number,
-                    quantity: (pos.quantity as number) || 1,
-                  },
-                ],
-              }
-            }
-          }
-
-          if (tr.toolName === "setLegalTerms") {
+        if (toolName === "addServicePosition") {
+          const pos = result.position as Record<string, unknown>
+          const exists = next.services.some((s) => s.description === pos.description)
+          if (!exists) {
             next = {
               ...next,
-              legalTerms: {
-                nachlassLizenzenMs: (tr.args.nachlassLizenzenMs as number) || 0,
-                nachlassLizenzenNavax: (tr.args.nachlassLizenzenNavax as number) || 0,
-                nachlassDl: (tr.args.nachlassDl as number) || 0,
-                zahlungsfrist: (tr.args.zahlungsfrist as string) || "30 Tage",
-              },
+              services: [
+                ...next.services,
+                {
+                  id: `svc_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+                  category: pos.category as string,
+                  description: pos.description as string,
+                  unit: (pos.unit as "LT" | "STD") || "LT",
+                  quantity: pos.quantity as number,
+                  rate: pos.rate as number,
+                  discount: (pos.discount as number) || 0,
+                  total: pos.total as number,
+                  optional: (pos.optional as boolean) || false,
+                },
+              ],
             }
+          }
+        }
+
+        if (toolName === "addSolutionPosition") {
+          const pos = result.position as Record<string, unknown>
+          const exists = next.solutions.some((s) => s.name === pos.name)
+          if (!exists) {
+            const priceMap: Record<number, number> = { 1: 540, 2: 1530, 3: 2680, 4: 0 }
+            next = {
+              ...next,
+              solutions: [
+                ...next.solutions,
+                {
+                  id: `sol_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+                  name: pos.name as string,
+                  priceCategory: pos.priceCategory as 1 | 2 | 3 | 4,
+                  flatRate: (pos.flatRate as number) || priceMap[(pos.priceCategory as number)] || 0,
+                  additionalDl: (pos.additionalDl as number) || 0,
+                  articleNr: "",
+                },
+              ],
+            }
+          }
+        }
+
+        if (toolName === "addCustomerServicePosition") {
+          const pos = result.position as Record<string, unknown>
+          const exists = next.customerService.some(
+            (c) => c.package === (pos.packageName || pos.package)
+          )
+          if (!exists) {
+            next = {
+              ...next,
+              customerService: [
+                ...next.customerService,
+                {
+                  id: `csv_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+                  package: (pos.packageName || pos.package) as string,
+                  description: pos.description as string,
+                  monthlyFee: pos.monthlyFee as number,
+                  quantity: (pos.quantity as number) || 1,
+                },
+              ],
+            }
+          }
+        }
+
+        if (toolName === "setLegalTerms") {
+          next = {
+            ...next,
+            legalTerms: {
+              nachlassLizenzenMs: (args.nachlassLizenzenMs as number) || 0,
+              nachlassLizenzenNavax: (args.nachlassLizenzenNavax as number) || 0,
+              nachlassDl: (args.nachlassDl as number) || 0,
+              zahlungsfrist: (args.zahlungsfrist as string) || "30 Tage",
+            },
           }
         }
 
@@ -199,19 +256,37 @@ export function ChatInterface() {
     []
   )
 
+  // ---- Apply batch tool results (demo mode) ----
+  const applyToolResults = React.useCallback(
+    (toolResults: DemoChatMessage["toolResults"]) => {
+      if (!toolResults || toolResults.length === 0) return
+      for (const tr of toolResults) {
+        applyToolResult(tr.toolName, tr.args, tr.result)
+      }
+    },
+    [applyToolResult]
+  )
+
+  // ---- Send message (unified) ----
   const sendMessage = React.useCallback(
     async (text: string) => {
-      if (!text.trim() || isLoading) return
+      if (!text.trim()) return
 
-      const userMsg: ChatMessage = {
+      if (mode === "live") {
+        liveSendMessage({ text: text.trim() })
+        return
+      }
+
+      // Demo mode
+      if (demoLoading) return
+      const userMsg: DemoChatMessage = {
         id: `msg_${Date.now()}_user`,
         role: "user",
         text: text.trim(),
       }
-
-      const currentMessages = [...messagesRef.current, userMsg]
-      setMessages(currentMessages)
-      setIsLoading(true)
+      const currentMessages = [...demoMessagesRef.current, userMsg]
+      setDemoMessages(currentMessages)
+      setDemoLoading(true)
 
       try {
         const res = await fetch("/api/chat", {
@@ -225,44 +300,36 @@ export function ChatInterface() {
             quoteState: quoteStateRef.current,
           }),
         })
-
         if (!res.ok) {
           const errData = await res.json().catch(() => ({}))
           throw new Error(errData.error || `HTTP ${res.status}`)
         }
-
         const data = await res.json()
-
-        const assistantMsg: ChatMessage = {
+        const assistantMsg: DemoChatMessage = {
           id: `msg_${Date.now()}_assistant`,
           role: "assistant",
           text: data.text || "Ich konnte die Eingabe nicht verarbeiten.",
           toolResults: data.toolResults,
         }
-
-        setMessages((prev) => [...prev, assistantMsg])
-
+        setDemoMessages((prev) => [...prev, assistantMsg])
         if (data.toolResults?.length > 0) {
           applyToolResults(data.toolResults)
         }
       } catch (err) {
         const errorMsg = err instanceof Error ? err.message : "Unbekannter Fehler"
         toast.error(`Fehler: ${errorMsg}`)
-        setMessages((prev) => [
+        setDemoMessages((prev) => [
           ...prev,
-          {
-            id: `msg_${Date.now()}_error`,
-            role: "assistant",
-            text: `Entschuldigung, es ist ein Fehler aufgetreten: ${errorMsg}`,
-          },
+          { id: `msg_${Date.now()}_error`, role: "assistant", text: `Fehler: ${errorMsg}` },
         ])
       } finally {
-        setIsLoading(false)
+        setDemoLoading(false)
       }
     },
-    [isLoading, applyToolResults]
+    [mode, demoLoading, liveSendMessage, applyToolResults]
   )
 
+  // ---- Handlers ----
   const handleFileUpload = async (file: File) => {
     const text = await file.text()
     sendMessage(`[Hochgeladene Datei: ${file.name}]\n\n${text}`)
@@ -278,7 +345,6 @@ export function ChatInterface() {
         body: JSON.stringify({ quoteState }),
       })
       if (!res.ok) throw new Error("Excel-Generierung fehlgeschlagen")
-
       const blob = await res.blob()
       const url = URL.createObjectURL(blob)
       const a = document.createElement("a")
@@ -288,7 +354,6 @@ export function ChatInterface() {
       a.click()
       document.body.removeChild(a)
       URL.revokeObjectURL(url)
-
       setQuoteState((prev) => ({ ...prev, status: "generated" }))
       setShowPreview(false)
       toast.success("Excel erfolgreich generiert!")
@@ -300,14 +365,14 @@ export function ChatInterface() {
   }
 
   const handleNewQuote = () => {
-    setMessages([])
+    setDemoMessages([])
+    setLiveMessages([])
     setQuoteState(createEmptyQuoteState())
     setShowMobilePanel(false)
     setShowPreview(false)
   }
 
   const handleVoiceQuoteReady = React.useCallback(() => {
-    // After voice agent completes, trigger the demo flow through the chat
     sendMessage(
       "Kunde Alpentech Solutions GmbH in Wien moechte D365 Business Central einfuehren. 10 Essentials, 3 Premium, 15 Team Member, 5 Power BI Pro optional. EasyStarter Paket, FIBU und Warenwirtschaft Schulung, 15 Tage Implementierung, Go-Live Begleitung, PM Base. Trade365 und Intercompany Solution. Customer Service Essential. NAVAX Consulting AT, SaaS Cloud, Jaehrlich, Kostenstelle Wien, Kostentraeger Trade."
     )
@@ -320,7 +385,46 @@ export function ChatInterface() {
     toast.success("E-Mail an Sales-Support wird geoeffnet.")
   }
 
-  const isWelcome = messages.length === 0
+  // ---- Determine which messages to render ----
+  const isLoading = mode === "live" ? liveIsLoading : demoLoading
+  const isWelcome = mode === "live" ? liveMessages.length === 0 : demoMessages.length === 0
+
+  // ---- Render message list ----
+  const renderMessages = () => {
+    if (mode === "live") {
+      return liveMessages.map((msg) => {
+        const text = getUIMessageText(msg)
+        // Count tool invocations
+        const toolParts = msg.parts?.filter((p) => p.type === "tool-invocation") || []
+        return (
+          <MessageBubble
+            key={msg.id}
+            message={{
+              id: msg.id,
+              role: msg.role as "user" | "assistant",
+              text,
+              toolResults: toolParts.map((p) => {
+                const inv = (p as Record<string, unknown>).toolInvocation as {
+                  toolName: string
+                  args: Record<string, unknown>
+                  output?: Record<string, unknown>
+                } | undefined
+                return {
+                  toolName: inv?.toolName || "unknown",
+                  args: inv?.args || {},
+                  result: inv?.output || {},
+                }
+              }),
+            }}
+          />
+        )
+      })
+    }
+
+    return demoMessages.map((msg) => (
+      <MessageBubble key={msg.id} message={msg} />
+    ))
+  }
 
   return (
     <>
@@ -337,9 +441,7 @@ export function ChatInterface() {
               />
             ) : (
               <div className="flex flex-col gap-5 px-4 py-6 lg:px-8">
-                {messages.map((message) => (
-                  <MessageBubble key={message.id} message={message} />
-                ))}
+                {renderMessages()}
                 {isLoading && (
                   <div className="flex gap-3 items-start">
                     <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary/80 to-secondary/80 text-primary-foreground">
@@ -383,27 +485,15 @@ export function ChatInterface() {
                     <PanelRightOpen className="h-4 w-4 mr-1.5" />
                     Details
                   </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowPreview(true)}
-                  >
+                  <Button variant="outline" size="sm" onClick={() => setShowPreview(true)}>
                     <Eye className="h-4 w-4 mr-1.5" />
                     Vorschau
                   </Button>
-                  <Button
-                    size="sm"
-                    onClick={handleGenerateExcel}
-                    disabled={isGenerating}
-                  >
+                  <Button size="sm" onClick={handleGenerateExcel} disabled={isGenerating}>
                     <Download className="h-4 w-4 mr-1.5" />
                     {isGenerating ? "..." : "Excel"}
                   </Button>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={handleSendToSales}
-                  >
+                  <Button size="sm" variant="secondary" onClick={handleSendToSales}>
                     <Mail className="h-4 w-4 mr-1.5" />
                     Sales
                   </Button>
@@ -446,15 +536,10 @@ export function ChatInterface() {
         {/* Progress panel - mobile overlay */}
         {showMobilePanel && (
           <div className="absolute inset-0 z-50 flex lg:hidden">
-            <div
-              className="absolute inset-0 bg-background/80 backdrop-blur-sm"
-              onClick={() => setShowMobilePanel(false)}
-            />
+            <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" onClick={() => setShowMobilePanel(false)} />
             <div className="relative ml-auto w-80 max-w-[85vw] bg-card border-l border-border p-4 overflow-y-auto shadow-xl animate-in slide-in-from-right">
               <div className="flex items-center justify-between mb-4">
-                <span className="text-sm font-semibold text-foreground font-heading">
-                  Angebotsdetails
-                </span>
+                <span className="text-sm font-semibold text-foreground font-heading">Angebotsdetails</span>
                 <Button variant="ghost" size="icon" onClick={() => setShowMobilePanel(false)}>
                   <X className="h-4 w-4" />
                 </Button>

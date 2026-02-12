@@ -17,6 +17,7 @@ import {
   Sun,
 } from "lucide-react"
 import { useTheme } from "next-themes"
+import { useMode } from "@/lib/store/mode-context"
 
 const navItems = [
   {
@@ -44,6 +45,7 @@ export function AppShell({ children }: AppShellProps) {
   const pathname = usePathname()
   const [collapsed, setCollapsed] = React.useState(false)
   const { theme, setTheme } = useTheme()
+  const { mode, setMode } = useMode()
   const [mounted, setMounted] = React.useState(false)
 
   React.useEffect(() => {
@@ -120,6 +122,50 @@ export function AppShell({ children }: AppShellProps) {
             })}
           </ul>
         </nav>
+
+        {/* Mode toggle */}
+        <div className="border-t border-sidebar-border px-2 py-2">
+          <button
+            onClick={() => setMode(mode === "demo" ? "live" : "demo")}
+            className={cn(
+              "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150",
+              collapsed && "justify-center px-0",
+              mode === "live"
+                ? "bg-primary/10 text-primary"
+                : "text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground"
+            )}
+            title={collapsed ? (mode === "demo" ? "Zu Live wechseln" : "Zu Demo wechseln") : undefined}
+            aria-label={mode === "demo" ? "Zu Live-Modus wechseln" : "Zu Demo-Modus wechseln"}
+          >
+            <div
+              className={cn(
+                "flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold",
+                mode === "live"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-sidebar-foreground/20 text-sidebar-foreground/60"
+              )}
+            >
+              {mode === "live" ? "AI" : "D"}
+            </div>
+            {!collapsed && (
+              <span className="flex-1 text-left">
+                {mode === "live" ? "Live (AI)" : "Demo-Modus"}
+              </span>
+            )}
+            {!collapsed && (
+              <span
+                className={cn(
+                  "rounded-full px-2 py-0.5 text-[10px] font-semibold",
+                  mode === "live"
+                    ? "bg-primary/20 text-primary"
+                    : "bg-sidebar-foreground/10 text-sidebar-foreground/50"
+                )}
+              >
+                {mode === "live" ? "ON" : "OFF"}
+              </span>
+            )}
+          </button>
+        </div>
 
         {/* Dark mode toggle */}
         <div className="border-t border-sidebar-border px-2 py-2">
