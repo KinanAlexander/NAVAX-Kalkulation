@@ -47,7 +47,6 @@ export function VoiceAgentOverlay({
   const streamRef = React.useRef<MediaStream | null>(null)
   const levelAnimRef = React.useRef<number>(0)
 
-  // All demo fields that will be "filled"
   const DEMO_FIELDS: FilledField[] = React.useMemo(
     () => [
       { label: "Unternehmen", value: "Alpentech Solutions GmbH", category: "header" },
@@ -74,7 +73,6 @@ export function VoiceAgentOverlay({
     []
   )
 
-  // Start audio level monitoring
   const startAudioLevel = React.useCallback(async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
@@ -89,7 +87,6 @@ export function VoiceAgentOverlay({
       analyserRef.current = analyser
 
       const dataArray = new Uint8Array(analyser.frequencyBinCount)
-
       function updateLevel() {
         if (!analyserRef.current) return
         analyserRef.current.getByteFrequencyData(dataArray)
@@ -101,7 +98,6 @@ export function VoiceAgentOverlay({
       }
       updateLevel()
     } catch {
-      // Microphone access denied -- simulate levels
       function fakeLevel() {
         setAudioLevel(Math.random() * 0.5 + 0.1)
         levelAnimRef.current = requestAnimationFrame(fakeLevel)
@@ -124,7 +120,6 @@ export function VoiceAgentOverlay({
     setAudioLevel(0)
   }, [])
 
-  // Cleanup on close
   React.useEffect(() => {
     if (!open) {
       stopAudioLevel()
@@ -138,7 +133,6 @@ export function VoiceAgentOverlay({
     }
   }, [open, stopAudioLevel])
 
-  // Start listening
   const startListening = React.useCallback(async () => {
     setPhase("listening")
     setTranscript("")
@@ -165,14 +159,12 @@ export function VoiceAgentOverlay({
       }
 
       recognition.onerror = () => {
-        // Fallback to demo transcript
         setTranscript(
           "Kunde Alpentech Solutions in Wien moechte Business Central einfuehren mit zehn Essentials Lizenzen und Trade365"
         )
       }
       recognition.start()
     } else {
-      // No speech API -- simulate typing
       const demoText =
         "Kunde Alpentech Solutions in Wien moechte Business Central einfuehren mit zehn Essentials Lizenzen und Trade365"
       let i = 0
@@ -184,13 +176,11 @@ export function VoiceAgentOverlay({
     }
   }, [startAudioLevel])
 
-  // Stop listening and start processing
   const stopListening = React.useCallback(() => {
     recognitionRef.current?.stop()
     stopAudioLevel()
     setPhase("processing")
 
-    // Simulate processing delay, then field fill
     setTimeout(() => {
       setPhase("field-fill")
       setFilledFields(DEMO_FIELDS)
@@ -198,11 +188,9 @@ export function VoiceAgentOverlay({
     }, 2000)
   }, [stopAudioLevel, DEMO_FIELDS])
 
-  // Animate fields appearing one by one
   React.useEffect(() => {
     if (phase !== "field-fill") return
     if (visibleFieldCount >= DEMO_FIELDS.length) {
-      // All fields shown -- move to speaking
       setTimeout(() => {
         setPhase("speaking")
         speakResponse()
@@ -218,14 +206,12 @@ export function VoiceAgentOverlay({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, visibleFieldCount, DEMO_FIELDS.length])
 
-  // TTS response
   const speakResponse = () => {
     const text =
       "Ich habe das Angebot vollstaendig ausgefuellt. Alpentech Solutions bekommt zehn Essentials Lizenzen, drei Premium, und fuenfzehn Team Member. Dazu das EasyStarter Paket, Schulungen, und Trade 365. Das Excel ist bereit zum Download."
 
     setAgentText("")
 
-    // Reveal text word by word
     const words = text.split(" ")
     let wordIndex = 0
     const wordInterval = setInterval(() => {
@@ -238,19 +224,16 @@ export function VoiceAgentOverlay({
       wordIndex++
     }, 80)
 
-    // Try TTS
     if ("speechSynthesis" in window) {
       const utterance = new SpeechSynthesisUtterance(text)
       utterance.lang = "de-DE"
       utterance.rate = 1.0
       utterance.pitch = 1.0
 
-      // Try to find a German voice
       const voices = speechSynthesis.getVoices()
       const deVoice = voices.find((v) => v.lang.startsWith("de"))
       if (deVoice) utterance.voice = deVoice
 
-      // Simulate audio level during speech
       utterance.onstart = () => {
         const speakInterval = setInterval(() => {
           setAudioLevel(Math.random() * 0.4 + 0.2)
@@ -265,14 +248,14 @@ export function VoiceAgentOverlay({
     }
   }
 
-  // Handle completion -- trigger the demo data in chat
   const handleComplete = () => {
-    // Send the transcript as a message through the chat to trigger demo data
     onQuoteReady(quoteState, [])
     onClose()
   }
 
   if (!open) return null
+
+  const showFieldPanel = phase === "field-fill" || phase === "speaking" || phase === "complete"
 
   const categoryColors: Record<string, string> = {
     header: "bg-primary/15 text-primary border-primary/20",
@@ -293,7 +276,7 @@ export function VoiceAgentOverlay({
   return (
     <div className="fixed inset-0 z-[100] flex flex-col bg-background/95 backdrop-blur-xl animate-in fade-in duration-300">
       {/* Top bar */}
-      <div className="flex items-center justify-between px-6 py-4">
+      <div className="flex shrink-0 items-center justify-between px-6 py-4 border-b border-border/50">
         <div className="flex items-center gap-3">
           <div
             className={cn(
@@ -326,12 +309,12 @@ export function VoiceAgentOverlay({
       </div>
 
       {/* Main content */}
-      <div className="flex flex-1 min-h-0 flex-col lg:flex-row overflow-hidden">
+      <div className="flex flex-1 min-h-0 flex-col lg:flex-row">
         {/* Left: Orb + Transcript */}
-        <div className="flex flex-1 min-h-0 flex-col items-center overflow-y-auto scrollbar-thin gap-6 px-8 py-6">
-          {/* Top spacer to push orb towards center */}
-          <div className="flex-1 min-h-4" />
-
+        <div className={cn(
+          "flex flex-col items-center justify-center gap-6 px-8 py-6 overflow-y-auto scrollbar-thin",
+          showFieldPanel ? "h-[45vh] lg:h-auto lg:flex-1" : "flex-1"
+        )}>
           {/* Orb */}
           <button
             onClick={() => {
@@ -339,7 +322,7 @@ export function VoiceAgentOverlay({
               else if (phase === "listening") stopListening()
             }}
             className={cn(
-              "relative cursor-pointer transition-transform hover:scale-[1.02] active:scale-[0.98]",
+              "relative cursor-pointer transition-transform hover:scale-[1.02] active:scale-[0.98] shrink-0",
               (phase !== "ready" && phase !== "listening") && "pointer-events-none"
             )}
             aria-label={phase === "ready" ? "Aufnahme starten" : phase === "listening" ? "Aufnahme stoppen" : "Agent verarbeitet"}
@@ -356,7 +339,6 @@ export function VoiceAgentOverlay({
               }
               audioLevel={audioLevel}
             />
-            {/* Mic icon overlay */}
             {(phase === "ready" || phase === "listening") && (
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                 {phase === "ready" ? (
@@ -369,7 +351,7 @@ export function VoiceAgentOverlay({
           </button>
 
           {/* Transcript / Agent text */}
-          <div className="w-full max-w-lg min-h-[80px] text-center">
+          <div className="w-full max-w-lg text-center shrink-0">
             {phase === "listening" && transcript && (
               <p className="text-lg text-foreground leading-relaxed animate-in fade-in">
                 {'"'}{transcript}{'"'}
@@ -390,74 +372,70 @@ export function VoiceAgentOverlay({
                 {agentText}
               </p>
             )}
+          </div>
+        </div>
+
+        {/* Right: Live field fill panel */}
+        {showFieldPanel && (
+          <div className="flex flex-col flex-1 lg:flex-none lg:w-96 min-h-0 border-t lg:border-t-0 lg:border-l border-border bg-card/50 animate-in slide-in-from-right duration-500">
+            {/* Scrollable fields */}
+            <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin p-6">
+              <h3 className="text-sm font-semibold text-foreground mb-4 font-heading">
+                Erkannte Felder
+              </h3>
+
+              {["header", "license", "service", "solution", "customerService"].map((cat) => {
+                const visibleFields = DEMO_FIELDS.filter(
+                  (f, i) => f.category === cat && i < visibleFieldCount
+                )
+                if (visibleFields.length === 0) return null
+
+                return (
+                  <div key={cat} className="mb-4">
+                    <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+                      {categoryLabels[cat]}
+                    </span>
+                    <div className="mt-1.5 flex flex-col gap-1.5">
+                      {visibleFields.map((field, i) => (
+                        <div
+                          key={`${cat}-${i}`}
+                          className={cn(
+                            "flex items-center gap-2 rounded-lg border px-3 py-2 text-xs animate-in fade-in slide-in-from-left duration-300",
+                            categoryColors[cat]
+                          )}
+                          style={{ animationDelay: `${i * 50}ms` }}
+                        >
+                          <Check className="h-3 w-3 shrink-0" />
+                          <span className="font-medium">{field.label}:</span>
+                          <span className="truncate opacity-80">{field.value}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })}
+
+              {phase === "complete" && (
+                <div className="mt-4 rounded-lg bg-success/10 border border-success/20 px-4 py-3 text-sm text-success">
+                  <div className="flex items-center gap-2">
+                    <Check className="h-4 w-4" />
+                    <span className="font-semibold">{visibleFieldCount} Felder ausgefuellt</span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Sticky bottom button */}
             {phase === "complete" && (
-              <div className="mt-6 pb-4">
+              <div className="shrink-0 border-t border-border p-4 bg-card">
                 <Button
                   size="lg"
                   onClick={handleComplete}
-                  className="gap-2 rounded-xl px-8"
+                  className="w-full gap-2 rounded-xl"
                 >
                   <Check className="h-5 w-5" />
                   Angebot uebernehmen
                 </Button>
-              </div>
-            )}
-          </div>
-
-          {/* Bottom spacer */}
-          <div className="flex-1 min-h-4" />
-        </div>
-
-        {/* Right: Live field fill */}
-        {(phase === "field-fill" || phase === "speaking" || phase === "complete") && (
-          <div className="w-full lg:w-96 border-t lg:border-t-0 lg:border-l border-border bg-card/50 overflow-y-auto scrollbar-thin p-6 animate-in slide-in-from-right duration-500">
-            <h3 className="text-sm font-semibold text-foreground mb-4 font-heading">
-              Erkannte Felder
-            </h3>
-
-            {/* Group by category */}
-            {["header", "license", "service", "solution", "customerService"].map((cat) => {
-              const fields = filledFields
-                .filter((f) => f.category === cat)
-                .slice(0, visibleFieldCount)
-                .filter((f) => DEMO_FIELDS.indexOf(f) < visibleFieldCount)
-              if (fields.length === 0) return null
-
-              // Check which fields of this category are visible
-              const visibleFields = DEMO_FIELDS.filter((f, i) => f.category === cat && i < visibleFieldCount)
-              if (visibleFields.length === 0) return null
-
-              return (
-                <div key={cat} className="mb-4">
-                  <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
-                    {categoryLabels[cat]}
-                  </span>
-                  <div className="mt-1.5 flex flex-col gap-1.5">
-                    {visibleFields.map((field, i) => (
-                      <div
-                        key={`${cat}-${i}`}
-                        className={cn(
-                          "flex items-center gap-2 rounded-lg border px-3 py-2 text-xs animate-in fade-in slide-in-from-left duration-300",
-                          categoryColors[cat]
-                        )}
-                        style={{ animationDelay: `${i * 50}ms` }}
-                      >
-                        <Check className="h-3 w-3 shrink-0" />
-                        <span className="font-medium">{field.label}:</span>
-                        <span className="truncate opacity-80">{field.value}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )
-            })}
-
-            {phase === "complete" && (
-              <div className="mt-4 rounded-lg bg-success/10 border border-success/20 px-4 py-3 text-sm text-success">
-                <div className="flex items-center gap-2">
-                  <Check className="h-4 w-4" />
-                  <span className="font-semibold">{visibleFieldCount} Felder ausgefuellt</span>
-                </div>
               </div>
             )}
           </div>
