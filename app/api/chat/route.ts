@@ -9,10 +9,6 @@ interface ParsedInfo {
   solutions: Array<{ name: string; priceCategory: number }>
 }
 
-/**
- * Parse ONLY the latest user message for new information.
- * The quoteState already contains everything from previous messages.
- */
 function parseLatestMessage(text: string): ParsedInfo {
   const lower = text.toLowerCase()
   const info: ParsedInfo = {
@@ -23,55 +19,40 @@ function parseLatestMessage(text: string): ParsedInfo {
   }
 
   // --- Header fields ---
+  // Company name - flexible patterns
   const companyPatterns = [
     /(?:firma|unternehmen|kunde|kundenname|company)[:\s]+["']?([a-zäöüßA-ZÄÖÜ\s&.\-]+?)["']?(?:\s*[,.\n]|$)/i,
-    /(?:fuer|für)\s+(?:die\s+)?(?:firma\s+)?["']?([a-zäöüßA-ZÄÖÜ\s&.\-]{3,40})["']?(?:\s*[,.\n]|$)/i,
+    /(?:fuer|für)\s+(?:die\s+)?(?:firma\s+)?["']?([a-zäöüßA-ZÄÖÜ\s&.\-]{3,40}?)["']?\s+(?:moechte|möchte|braucht|will|in\s)/i,
   ]
   for (const p of companyPatterns) {
     const m = text.match(p)
-    if (m?.[1] && m[1].trim().length >= 3) {
+    if (m?.[1] && m[1].trim().length >= 2) {
       info.headerFields.unternehmensname = m[1].trim()
       break
     }
   }
 
   // Titel
-  const titlePatterns = [
-    /(?:titel|angebotstitel|betreff|projekt)[:\s]+["']?([^"'\n,]{5,80})["']?/i,
-  ]
-  for (const p of titlePatterns) {
-    const m = text.match(p)
-    if (m?.[1]) {
-      info.headerFields.angebotstitel = m[1].trim()
-      break
-    }
-  }
+  const titleMatch = text.match(/(?:titel|angebotstitel|betreff|projekt)[:\s]+["']?([^"'\n,]{5,80})["']?/i)
+  if (titleMatch?.[1]) info.headerFields.angebotstitel = titleMatch[1].trim()
 
   // Verantwortlicher
-  const respPatterns = [
-    /(?:verantwortlich|projektverantwortlich|mein name|ich bin|ich heisse|ich heiße)[:\s]+["']?([a-zäöüßA-ZÄÖÜ\s.\-]{3,40})["']?/i,
-  ]
-  for (const p of respPatterns) {
-    const m = text.match(p)
-    if (m?.[1]) {
-      info.headerFields.projektverantwortlicher = m[1].trim()
-      break
-    }
-  }
+  const respMatch = text.match(/(?:verantwortlich|projektverantwortlich|mein name|ich bin|ich heisse|ich heiße)[:\s]+["']?([a-zäöüßA-ZÄÖÜ\s.\-]{3,40})["']?/i)
+  if (respMatch?.[1]) info.headerFields.projektverantwortlicher = respMatch[1].trim()
 
   // Kostenstelle
   if (lower.includes("graz")) info.headerFields.kostenstelle = "1 - Graz"
   else if (lower.includes("linz")) info.headerFields.kostenstelle = "2 - Linz"
   else if (lower.includes("wien") || lower.includes("vienna")) info.headerFields.kostenstelle = "4 - Wien"
 
-  // Mandant
+  // Mandant - derive from Kostenstelle or explicit
   if (lower.includes("deutschland") || lower.includes("navax gmbh") || lower.includes("(de)"))
     info.headerFields.angebotImMandant = "NAVAX GmbH (DE)"
-  else if (lower.includes("oesterreich") || lower.includes("österreich") || lower.includes("navax consulting") || lower.includes("(at)") || lower.includes(" at") || lower.includes("wien") || lower.includes("graz") || lower.includes("linz"))
+  else if (lower.includes("oesterreich") || lower.includes("österreich") || lower.includes("navax consulting") || lower.includes("(at)") || lower.includes("wien") || lower.includes("graz") || lower.includes("linz"))
     info.headerFields.angebotImMandant = "NAVAX Consulting (AT)"
 
   // Sprache
-  if (lower.includes("englisch") || lower.includes("english") || lower.includes("sprache en") || lower.includes("auf englisch"))
+  if (lower.includes("englisch") || lower.includes("english") || lower.includes("sprache en"))
     info.headerFields.sprache = "EN"
   else if (lower.includes("deutsch") || lower.includes("sprache de") || lower.includes("auf deutsch"))
     info.headerFields.sprache = "DE"
@@ -79,7 +60,7 @@ function parseLatestMessage(text: string): ParsedInfo {
   // Kostentraeger
   if (lower.includes("trade") || lower.includes("handel")) info.headerFields.kostentraeger = "104 - Trade"
   else if (lower.includes("construction") || lower.includes("bau")) info.headerFields.kostentraeger = "105 - Construction"
-  else if (lower.includes("professional") || lower.includes("prof. services")) info.headerFields.kostentraeger = "106 - Prof. Services"
+  else if (lower.includes("professional") || lower.includes("prof. services") || lower.includes("dienstleistung")) info.headerFields.kostentraeger = "106 - Prof. Services"
   else if (lower.includes("manufacturing") || lower.includes("fertigung")) info.headerFields.kostentraeger = "107 - Manufacturing"
 
   // Deployment / Lizenzart
@@ -108,7 +89,7 @@ function parseLatestMessage(text: string): ParsedInfo {
     { regex: /(\d+)\s*(?:x\s*)?premium(?!\s*s)/i, product: "Premium", category: "D365 Business Central", price: 100 },
     { regex: /(\d+)\s*(?:x\s*)?team\s*member/i, product: "Team Member", category: "D365 Business Central", price: 8 },
     { regex: /(\d+)\s*(?:x\s*)?device/i, product: "Device", category: "D365 Business Central", price: 40 },
-    { regex: /(\d+)\s*(?:x\s*)?sales\s*enterprise/i, product: "Sales Enterprise", category: "D365 CX", price: 95 },
+    { regex: /(\d+)\s*(?:x\s*)?sales\s*(?:enterprise)?/i, product: "Sales Enterprise", category: "D365 CX", price: 95 },
     { regex: /(\d+)\s*(?:x\s*)?customer\s*service\s*enterprise/i, product: "Customer Service Enterprise", category: "D365 CX", price: 95 },
     { regex: /(\d+)\s*(?:x\s*)?field\s*service/i, product: "Field Service", category: "D365 CX", price: 95 },
     { regex: /(\d+)\s*(?:x\s*)?power\s*bi\s*pro/i, product: "Power BI Pro", category: "Power BI / Data Analytics", price: 10 },
@@ -126,7 +107,6 @@ function parseLatestMessage(text: string): ParsedInfo {
   if (lower.includes("power bi") && (lower.includes("workshop") || lower.includes("paket"))) info.services.push({ category: "DL Data Analytics", description: "Power BI Package Activation", unit: "LT", quantity: 5, rate: 400, discount: 0 })
   if (lower.includes("implementierung") || lower.includes("umsetzung")) info.services.push({ category: "DL ERP", description: "Projektumsetzung / Implementierung", unit: "LT", quantity: 10, rate: 400, discount: 0 })
   if (lower.includes("go-live")) info.services.push({ category: "DL ERP", description: "Go-Live Begleitung", unit: "LT", quantity: 2, rate: 400, discount: 0 })
-  if (lower.includes("ki einfuehrung") || lower.includes("ai workshop")) info.services.push({ category: "DL AI", description: "KI Einfuehrungsworkshop", unit: "LT", quantity: 2, rate: 400, discount: 0 })
 
   // --- Solutions ---
   if (lower.includes("trade365")) info.solutions.push({ name: "Trade365", priceCategory: 3 })
@@ -136,15 +116,7 @@ function parseLatestMessage(text: string): ParsedInfo {
   return info
 }
 
-/**
- * Check which required fields are still missing - using the MERGED state
- * (existing quoteState + newly parsed fields).
- */
-function getMissingFields(
-  quoteState: Partial<QuoteState> | undefined,
-  newHeaderFields: Record<string, string>
-): string[] {
-  const header = { ...(quoteState?.header || {}), ...newHeaderFields }
+function getMissingFields(mergedHeader: Record<string, string>): string[] {
   const missing: string[] = []
 
   const required: Array<{ key: string; label: string }> = [
@@ -161,8 +133,8 @@ function getMissingFields(
   ]
 
   for (const r of required) {
-    const val = header[r.key as keyof typeof header]
-    if (!val || (typeof val === "string" && val.trim() === "")) {
+    const val = mergedHeader[r.key]
+    if (!val || val.trim() === "") {
       missing.push(r.label)
     }
   }
@@ -170,20 +142,15 @@ function getMissingFields(
   return missing
 }
 
-/**
- * Filter out tool results for fields that are ALREADY in the quoteState.
- * Only send tool results for genuinely NEW data.
- */
 function filterNewToolResults(
   info: ParsedInfo,
   quoteState: Partial<QuoteState> | undefined
 ) {
   const toolResults: Array<{ toolName: string; args: Record<string, unknown>; result: Record<string, unknown> }> = []
 
-  // Only send header fields that are actually new or changed
-  const existingHeader = quoteState?.header || {}
+  const existingHeader = (quoteState?.header || {}) as Record<string, string>
   for (const [field, value] of Object.entries(info.headerFields)) {
-    const existingVal = existingHeader[field as keyof typeof existingHeader]
+    const existingVal = existingHeader[field]
     if (!existingVal || existingVal !== value) {
       toolResults.push({
         toolName: "setHeaderField",
@@ -193,13 +160,10 @@ function filterNewToolResults(
     }
   }
 
-  // Only add licenses not already present
   const existingLicenses = (quoteState?.licenses || []) as LicensePosition[]
   for (const lic of info.licenses) {
-    const alreadyExists = existingLicenses.some(
-      (l) => l.product === lic.product && l.category === lic.category
-    )
-    if (!alreadyExists) {
+    const exists = existingLicenses.some((l) => l.product === lic.product && l.category === lic.category)
+    if (!exists) {
       const total = lic.quantity * lic.unitPrice * (1 - lic.discount / 100)
       toolResults.push({
         toolName: "addLicensePosition",
@@ -209,11 +173,10 @@ function filterNewToolResults(
     }
   }
 
-  // Only add services not already present
   const existingServices = (quoteState?.services || []) as ServicePosition[]
   for (const svc of info.services) {
-    const alreadyExists = existingServices.some((s) => s.description === svc.description)
-    if (!alreadyExists) {
+    const exists = existingServices.some((s) => s.description === svc.description)
+    if (!exists) {
       const total = svc.quantity * svc.rate * (1 - svc.discount / 100)
       toolResults.push({
         toolName: "addServicePosition",
@@ -223,12 +186,11 @@ function filterNewToolResults(
     }
   }
 
-  // Only add solutions not already present
   const existingSolutions = (quoteState?.solutions || []) as SolutionPosition[]
   const priceMap: Record<number, number> = { 1: 540, 2: 1530, 3: 2680, 4: 0 }
   for (const sol of info.solutions) {
-    const alreadyExists = existingSolutions.some((s) => s.name === sol.name)
-    if (!alreadyExists) {
+    const exists = existingSolutions.some((s) => s.name === sol.name)
+    if (!exists) {
       toolResults.push({
         toolName: "addSolutionPosition",
         args: { ...sol, additionalDl: null },
@@ -243,100 +205,94 @@ function filterNewToolResults(
 function buildResponseText(
   toolResults: Array<{ toolName: string; args: Record<string, unknown>; result: Record<string, unknown> }>,
   missingFields: string[],
+  mergedHeader: Record<string, string>,
   quoteState: Partial<QuoteState> | undefined,
-  newHeaderFields: Record<string, string>,
   isFollowUp: boolean
 ): string {
   const parts: string[] = []
+  const labels: Record<string, string> = {
+    unternehmensname: "Kunde", sprache: "Sprache", angebotImMandant: "Mandant",
+    registerkarteDlEinheit: "DL-Einheit", lizenzart: "Lizenzart", lizenzabrechnung: "Abrechnung",
+    angebotstitel: "Titel", kostenstelle: "Kostenstelle", kostentraeger: "Kostentraeger",
+    projektverantwortlicher: "Verantwortlich", projektart: "Produktlinie",
+  }
 
-  // Determine what was newly added
   const newHeaders = toolResults.filter((t) => t.toolName === "setHeaderField")
   const newLicenses = toolResults.filter((t) => t.toolName === "addLicensePosition")
   const newServices = toolResults.filter((t) => t.toolName === "addServicePosition")
   const newSolutions = toolResults.filter((t) => t.toolName === "addSolutionPosition")
-
   const hasNewData = toolResults.length > 0
 
   if (!hasNewData && isFollowUp) {
-    // User wrote something but we couldn't extract anything new
-    parts.push("Ich konnte aus deiner Nachricht keine neuen Angaben extrahieren. Koenntest du die fehlenden Informationen bitte nochmal etwas deutlicher angeben?\n")
+    parts.push("Ich konnte aus deiner Nachricht keine neuen Angaben extrahieren. Bitte formuliere die fehlenden Infos etwas deutlicher.\n")
   } else if (hasNewData) {
-    parts.push(isFollowUp ? "Danke, ich habe folgendes neu erfasst:\n" : "Danke fuer die Informationen! Ich habe folgendes erfasst:\n")
+    parts.push(isFollowUp ? "Danke, ich habe Neues erfasst:\n" : "Danke fuer die Informationen! Ich habe folgendes erfasst:\n")
 
     if (newHeaders.length > 0) {
-      parts.push("**Neue Kopfdaten:**")
-      const labels: Record<string, string> = {
-        unternehmensname: "Kunde", sprache: "Sprache", angebotImMandant: "Mandant",
-        registerkarteDlEinheit: "DL-Einheit", lizenzart: "Lizenzart", lizenzabrechnung: "Abrechnung",
-        angebotstitel: "Titel", kostenstelle: "Kostenstelle", kostentraeger: "Kostentraeger",
-        projektverantwortlicher: "Verantwortlich", projektart: "Produktlinie",
-      }
+      parts.push("**Kopfdaten:**")
       for (const tr of newHeaders) {
-        const field = tr.args.field as string
-        const value = tr.args.value as string
-        parts.push(`- ${labels[field] || field}: **${value}**`)
+        parts.push(`- ${labels[tr.args.field as string] || tr.args.field}: **${tr.args.value}**`)
       }
       parts.push("")
     }
 
     if (newLicenses.length > 0) {
-      parts.push("**Neue Lizenzen:**")
+      parts.push("**Lizenzen:**")
       for (const tr of newLicenses) {
-        const pos = tr.result.position as Record<string, unknown>
-        parts.push(`- ${pos.quantity}x ${pos.product} (${pos.category}) = **${((pos.quantity as number) * (pos.unitPrice as number)).toFixed(2)} EUR/Monat**`)
+        const p = tr.result.position as Record<string, unknown>
+        parts.push(`- ${p.quantity}x ${p.product} (${p.category}) = **${((p.quantity as number) * (p.unitPrice as number)).toFixed(2)} EUR/Monat**`)
       }
       parts.push("")
     }
 
     if (newServices.length > 0) {
-      parts.push("**Neue Dienstleistungen:**")
+      parts.push("**Dienstleistungen:**")
       for (const tr of newServices) {
-        const pos = tr.result.position as Record<string, unknown>
-        parts.push(`- ${pos.description}: ${pos.quantity} ${pos.unit} x ${pos.rate} EUR = **${((pos.quantity as number) * (pos.rate as number)).toFixed(2)} EUR**`)
+        const p = tr.result.position as Record<string, unknown>
+        parts.push(`- ${p.description}: ${p.quantity} ${p.unit} x ${p.rate} EUR = **${((p.quantity as number) * (p.rate as number)).toFixed(2)} EUR**`)
       }
       parts.push("")
     }
 
     if (newSolutions.length > 0) {
-      parts.push("**Neue NAVAX Solutions:**")
+      parts.push("**NAVAX Solutions:**")
       for (const tr of newSolutions) {
-        const pos = tr.result.position as Record<string, unknown>
-        parts.push(`- ${pos.name}: Pauschale **${(pos.flatRate as number).toFixed(2)} EUR**`)
+        const p = tr.result.position as Record<string, unknown>
+        parts.push(`- ${p.name}: Pauschale **${(p.flatRate as number).toFixed(2)} EUR**`)
       }
       parts.push("")
     }
   }
 
-  // Always show complete overview
-  const mergedHeader = { ...(quoteState?.header || {}), ...newHeaderFields }
-  const filledHeaders = Object.entries(mergedHeader).filter(([, v]) => v && String(v).trim() !== "")
-  const existingLicenses = [...(quoteState?.licenses || [])]
-  const existingServices = [...(quoteState?.services || [])]
-
-  if (filledHeaders.length > 0 || existingLicenses.length > 0 || existingServices.length > 0) {
-    parts.push("---\n**Aktueller Gesamtstand:**\n")
-
-    if (filledHeaders.length > 0) {
-      const labels: Record<string, string> = {
-        unternehmensname: "Kunde", sprache: "Sprache", angebotImMandant: "Mandant",
-        registerkarteDlEinheit: "DL-Einheit", lizenzart: "Lizenzart", lizenzabrechnung: "Abrechnung",
-        angebotstitel: "Titel", kostenstelle: "Kostenstelle", kostentraeger: "Kostentraeger",
-        projektverantwortlicher: "Verantwortlich", projektart: "Produktlinie",
-      }
-      for (const [key, val] of filledHeaders) {
-        if (labels[key]) parts.push(`- ${labels[key]}: ${val}`)
-      }
-      parts.push("")
+  // Show current total state
+  const filledHeaders = Object.entries(mergedHeader).filter(([, v]) => v && v.trim() !== "")
+  if (filledHeaders.length > 0) {
+    parts.push("---")
+    parts.push("**Aktueller Gesamtstand Kopfdaten:**")
+    for (const [key, val] of filledHeaders) {
+      if (labels[key]) parts.push(`- ${labels[key]}: ${val}`)
     }
+    parts.push("")
   }
 
-  // Missing fields or all done
+  // Existing licenses / services
+  const allLicenses = quoteState?.licenses || []
+  const allServices = quoteState?.services || []
+  if (allLicenses.length > 0) {
+    parts.push(`**Lizenzen gesamt:** ${allLicenses.length} Position(en)`)
+  }
+  if (allServices.length > 0) {
+    parts.push(`**Dienstleistungen gesamt:** ${allServices.length} Position(en)`)
+  }
+  if (allLicenses.length > 0 || allServices.length > 0) parts.push("")
+
+  // Missing fields
   if (missingFields.length > 0) {
-    parts.push("**Noch fehlend:**")
+    parts.push("**Noch fehlende Angaben:**")
     missingFields.forEach((f, i) => parts.push(`${i + 1}. ${f}`))
-    parts.push("\nBitte ergaenze diese Angaben, z.B.:\n*\"Titel: D365 BC Einfuehrung, Verantwortlich: Max Mustermann, Sprache Deutsch, Leistungstage\"*")
+    parts.push("\nBitte ergaenze diese Angaben, z.B.:\n*\"Titel: D365 BC Einfuehrung, Verantwortlich: Max Mustermann, Sprache Deutsch, Leistungstage, jaehrlich, Trade\"*")
   } else {
-    parts.push("Alle Pflichtfelder sind ausgefuellt! Du kannst jetzt im rechten Panel auf **\"Excel herunterladen\"** klicken, oder mir weitere Positionen nennen.")
+    parts.push("Alle Pflichtfelder sind ausgefuellt! Du kannst jetzt rechts auf **\"Excel herunterladen\"** klicken, oder mir weitere Positionen (Lizenzen, DL, Solutions) nennen.")
   }
 
   return parts.join("\n")
@@ -347,6 +303,10 @@ export async function POST(req: Request) {
     const body = await req.json()
     const rawMessages: Array<{ role: string; parts?: Array<{ type: string; text?: string }>; content?: string }> = body.messages || []
     const quoteState: QuoteState | undefined = body.quoteState
+
+    console.log("[v0] Incoming quoteState header:", JSON.stringify(quoteState?.header || {}))
+    console.log("[v0] Incoming quoteState licenses count:", quoteState?.licenses?.length || 0)
+    console.log("[v0] Incoming quoteState services count:", quoteState?.services?.length || 0)
 
     // Get ONLY the latest user message
     const userMessages = rawMessages.filter((m) => m.role === "user")
@@ -363,23 +323,51 @@ export async function POST(req: Request) {
       latestText = lastUserMsg.content
     }
 
+    console.log("[v0] Latest user text:", latestText.slice(0, 200))
+
     const isFollowUp = userMessages.length > 1
 
     // Parse only the latest message
     const info = parseLatestMessage(latestText)
+    console.log("[v0] Parsed header fields:", JSON.stringify(info.headerFields))
+    console.log("[v0] Parsed licenses:", info.licenses.length)
+    console.log("[v0] Parsed services:", info.services.length)
 
-    // Filter out duplicates against existing quoteState
+    // Build the merged header: existing state + newly parsed fields
+    const existingHeader = (quoteState?.header || {}) as Record<string, string>
+    const mergedHeader: Record<string, string> = {}
+    // Copy all existing header values
+    for (const [k, v] of Object.entries(existingHeader)) {
+      if (v && typeof v === "string" && v.trim() !== "") {
+        mergedHeader[k] = v
+      }
+    }
+    // Overlay newly parsed fields
+    for (const [k, v] of Object.entries(info.headerFields)) {
+      if (v && v.trim() !== "") {
+        mergedHeader[k] = v
+      }
+    }
+
+    console.log("[v0] Merged header:", JSON.stringify(mergedHeader))
+
+    // Filter to only new tool results
     const toolResults = filterNewToolResults(info, quoteState)
+    console.log("[v0] New tool results count:", toolResults.length)
 
-    // Check what's still missing AFTER applying new fields
-    const missingFields = getMissingFields(quoteState, info.headerFields)
+    // Check missing fields against merged header
+    const missingFields = getMissingFields(mergedHeader)
+    console.log("[v0] Missing fields:", missingFields)
 
-    // Build response text
-    const text = buildResponseText(toolResults, missingFields, quoteState, info.headerFields, isFollowUp)
+    // Build response
+    const text = buildResponseText(toolResults, missingFields, mergedHeader, quoteState, isFollowUp)
 
     return Response.json({ text, toolResults })
   } catch (error) {
     console.error("[v0] Mock Chat API error:", error)
-    return Response.json({ error: "Interner Serverfehler", details: String(error) }, { status: 500 })
+    return Response.json(
+      { error: "Interner Serverfehler", details: String(error) },
+      { status: 500 }
+    )
   }
 }

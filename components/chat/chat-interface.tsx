@@ -27,138 +27,155 @@ export function ChatInterface() {
   const [isGenerating, setIsGenerating] = React.useState(false)
   const scrollRef = React.useRef<HTMLDivElement>(null)
 
+  // Use a ref for quoteState so sendMessage always has the latest value
+  const quoteStateRef = React.useRef(quoteState)
+  React.useEffect(() => {
+    quoteStateRef.current = quoteState
+  }, [quoteState])
+
+  // Same for messages
+  const messagesRef = React.useRef(messages)
+  React.useEffect(() => {
+    messagesRef.current = messages
+  }, [messages])
+
   React.useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight
     }
   }, [messages])
 
-  const processToolResults = React.useCallback(
+  const applyToolResults = React.useCallback(
     (toolResults: ChatMessage["toolResults"]) => {
-      if (!toolResults) return
+      if (!toolResults || toolResults.length === 0) return
 
-      for (const tr of toolResults) {
-        const result = tr.result as Record<string, unknown>
-        if (!result.success) continue
+      setQuoteState((prev) => {
+        let next = { ...prev }
 
-        if (tr.toolName === "setHeaderField") {
-          const field = tr.args.field as string
-          const value = tr.args.value as string
-          setQuoteState((prev) => ({
-            ...prev,
-            header: { ...prev.header, [field]: value },
-            customerName: field === "unternehmensname" ? value : prev.customerName,
-            title: field === "angebotstitel" ? value : prev.title,
-            updatedAt: new Date().toISOString(),
-          }))
-        }
+        for (const tr of toolResults) {
+          const result = tr.result as Record<string, unknown>
+          if (!result.success) continue
 
-        if (tr.toolName === "addLicensePosition") {
-          const pos = result.position as Record<string, unknown>
-          setQuoteState((prev) => {
-            if (prev.licenses.some((l) => l.product === pos.product && l.category === pos.category)) return prev
-            return {
-              ...prev,
-              licenses: [
-                ...prev.licenses,
-                {
-                  id: `lic_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-                  category: pos.category as string,
-                  product: pos.product as string,
-                  quantity: pos.quantity as number,
-                  unitPrice: pos.unitPrice as number,
-                  discount: (pos.discount as number) || 0,
-                  total: pos.total as number,
-                  optional: (pos.optional as boolean) || false,
-                  articleNr: "",
-                },
-              ],
-              updatedAt: new Date().toISOString(),
+          if (tr.toolName === "setHeaderField") {
+            const field = tr.args.field as string
+            const value = tr.args.value as string
+            next = {
+              ...next,
+              header: { ...next.header, [field]: value },
+              customerName: field === "unternehmensname" ? value : next.customerName,
+              title: field === "angebotstitel" ? value : next.title,
             }
-          })
-        }
+          }
 
-        if (tr.toolName === "addServicePosition") {
-          const pos = result.position as Record<string, unknown>
-          setQuoteState((prev) => {
-            if (prev.services.some((s) => s.description === pos.description)) return prev
-            return {
-              ...prev,
-              services: [
-                ...prev.services,
-                {
-                  id: `svc_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-                  category: pos.category as string,
-                  description: pos.description as string,
-                  unit: (pos.unit as "LT" | "STD") || "LT",
-                  quantity: pos.quantity as number,
-                  rate: pos.rate as number,
-                  discount: (pos.discount as number) || 0,
-                  total: pos.total as number,
-                  optional: (pos.optional as boolean) || false,
-                },
-              ],
-              updatedAt: new Date().toISOString(),
+          if (tr.toolName === "addLicensePosition") {
+            const pos = result.position as Record<string, unknown>
+            const alreadyExists = next.licenses.some(
+              (l) => l.product === pos.product && l.category === pos.category
+            )
+            if (!alreadyExists) {
+              next = {
+                ...next,
+                licenses: [
+                  ...next.licenses,
+                  {
+                    id: `lic_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+                    category: pos.category as string,
+                    product: pos.product as string,
+                    quantity: pos.quantity as number,
+                    unitPrice: pos.unitPrice as number,
+                    discount: (pos.discount as number) || 0,
+                    total: pos.total as number,
+                    optional: (pos.optional as boolean) || false,
+                    articleNr: "",
+                  },
+                ],
+              }
             }
-          })
-        }
+          }
 
-        if (tr.toolName === "addSolutionPosition") {
-          const pos = result.position as Record<string, unknown>
-          setQuoteState((prev) => {
-            if (prev.solutions.some((s) => s.name === pos.name)) return prev
-            return {
-              ...prev,
-              solutions: [
-                ...prev.solutions,
-                {
-                  id: `sol_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-                  name: pos.name as string,
-                  priceCategory: pos.priceCategory as 1 | 2 | 3 | 4,
-                  flatRate: pos.flatRate as number,
-                  additionalDl: (pos.additionalDl as number) || 0,
-                  articleNr: "",
-                },
-              ],
-              updatedAt: new Date().toISOString(),
+          if (tr.toolName === "addServicePosition") {
+            const pos = result.position as Record<string, unknown>
+            const alreadyExists = next.services.some((s) => s.description === pos.description)
+            if (!alreadyExists) {
+              next = {
+                ...next,
+                services: [
+                  ...next.services,
+                  {
+                    id: `svc_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+                    category: pos.category as string,
+                    description: pos.description as string,
+                    unit: (pos.unit as "LT" | "STD") || "LT",
+                    quantity: pos.quantity as number,
+                    rate: pos.rate as number,
+                    discount: (pos.discount as number) || 0,
+                    total: pos.total as number,
+                    optional: (pos.optional as boolean) || false,
+                  },
+                ],
+              }
             }
-          })
-        }
+          }
 
-        if (tr.toolName === "addCustomerServicePosition") {
-          const pos = result.position as Record<string, unknown>
-          setQuoteState((prev) => {
-            if (prev.customerService.some((c) => c.package === pos.package)) return prev
-            return {
-              ...prev,
-              customerService: [
-                ...prev.customerService,
-                {
-                  id: `csv_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-                  package: pos.package as string,
-                  description: pos.description as string,
-                  monthlyFee: pos.monthlyFee as number,
-                  quantity: (pos.quantity as number) || 1,
-                },
-              ],
-              updatedAt: new Date().toISOString(),
+          if (tr.toolName === "addSolutionPosition") {
+            const pos = result.position as Record<string, unknown>
+            const alreadyExists = next.solutions.some((s) => s.name === pos.name)
+            if (!alreadyExists) {
+              const priceMap: Record<number, number> = { 1: 540, 2: 1530, 3: 2680, 4: 0 }
+              next = {
+                ...next,
+                solutions: [
+                  ...next.solutions,
+                  {
+                    id: `sol_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+                    name: pos.name as string,
+                    priceCategory: pos.priceCategory as 1 | 2 | 3 | 4,
+                    flatRate: (pos.flatRate as number) || priceMap[(pos.priceCategory as number)] || 0,
+                    additionalDl: (pos.additionalDl as number) || 0,
+                    articleNr: "",
+                  },
+                ],
+              }
             }
-          })
+          }
+
+          if (tr.toolName === "addCustomerServicePosition") {
+            const pos = result.position as Record<string, unknown>
+            const alreadyExists = next.customerService.some((c) => c.package === pos.package)
+            if (!alreadyExists) {
+              next = {
+                ...next,
+                customerService: [
+                  ...next.customerService,
+                  {
+                    id: `csv_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+                    package: pos.package as string,
+                    description: pos.description as string,
+                    monthlyFee: pos.monthlyFee as number,
+                    quantity: (pos.quantity as number) || 1,
+                  },
+                ],
+              }
+            }
+          }
+
+          if (tr.toolName === "setLegalTerms") {
+            next = {
+              ...next,
+              legalTerms: {
+                nachlassLizenzenMs: (tr.args.nachlassLizenzenMs as number) || 0,
+                nachlassLizenzenNavax: (tr.args.nachlassLizenzenNavax as number) || 0,
+                nachlassDl: (tr.args.nachlassDl as number) || 0,
+                zahlungsfrist: (tr.args.zahlungsfrist as string) || "30 Tage",
+              },
+            }
+          }
         }
 
-        if (tr.toolName === "setLegalTerms") {
-          setQuoteState((prev) => ({
-            ...prev,
-            legalTerms: {
-              nachlassLizenzenMs: (tr.args.nachlassLizenzenMs as number) || 0,
-              nachlassLizenzenNavax: (tr.args.nachlassLizenzenNavax as number) || 0,
-              nachlassDl: (tr.args.nachlassDl as number) || 0,
-              zahlungsfrist: (tr.args.zahlungsfrist as string) || "30 Tage",
-            },
-            updatedAt: new Date().toISOString(),
-          }))
-        }
-      }
+        next.updatedAt = new Date().toISOString()
+        console.log("[v0] Updated quoteState header:", JSON.stringify(next.header))
+        return next
+      })
     },
     []
   )
@@ -173,20 +190,25 @@ export function ChatInterface() {
         text: text.trim(),
       }
 
-      const updatedMessages = [...messages, userMsg]
-      setMessages(updatedMessages)
+      const currentMessages = [...messagesRef.current, userMsg]
+      setMessages(currentMessages)
       setIsLoading(true)
 
       try {
+        // Use ref to get latest quoteState (avoids stale closure)
+        const currentQuoteState = quoteStateRef.current
+
+        console.log("[v0] Sending quoteState header:", JSON.stringify(currentQuoteState.header))
+
         const res = await fetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            messages: updatedMessages.map((m) => ({
+            messages: currentMessages.map((m) => ({
               role: m.role,
               parts: [{ type: "text", text: m.text }],
             })),
-            quoteState,
+            quoteState: currentQuoteState,
           }),
         })
 
@@ -206,9 +228,9 @@ export function ChatInterface() {
 
         setMessages((prev) => [...prev, assistantMsg])
 
-        // Process tool results to update quote state
+        // Apply tool results to update quote state
         if (data.toolResults?.length > 0) {
-          processToolResults(data.toolResults)
+          applyToolResults(data.toolResults)
         }
       } catch (err) {
         const errorMsg = err instanceof Error ? err.message : "Unbekannter Fehler"
@@ -218,14 +240,14 @@ export function ChatInterface() {
           {
             id: `msg_${Date.now()}_error`,
             role: "assistant",
-            text: `Entschuldigung, es ist ein Fehler aufgetreten: ${errorMsg}. Bitte versuche es nochmal.`,
+            text: `Entschuldigung, es ist ein Fehler aufgetreten: ${errorMsg}`,
           },
         ])
       } finally {
         setIsLoading(false)
       }
     },
-    [messages, quoteState, isLoading, processToolResults]
+    [isLoading, applyToolResults]
   )
 
   const handleFileUpload = async (file: File) => {
