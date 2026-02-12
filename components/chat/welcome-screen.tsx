@@ -9,7 +9,9 @@ import {
   BarChart3,
   Zap,
   ArrowRight,
+  Mic,
 } from "lucide-react"
+import { Button } from "@/components/ui/button"
 
 interface QuickAction {
   icon: React.ElementType
@@ -56,10 +58,11 @@ const QUICK_ACTIONS: QuickAction[] = [
 
 interface WelcomeScreenProps {
   onSelectAction: (prompt: string) => void
+  onStartVoiceAgent?: () => void
   disabled?: boolean
 }
 
-export function WelcomeScreen({ onSelectAction, disabled }: WelcomeScreenProps) {
+export function WelcomeScreen({ onSelectAction, onStartVoiceAgent, disabled }: WelcomeScreenProps) {
   return (
     <div className="flex min-h-full flex-col items-center justify-center px-4 py-16">
       <div className="w-full max-w-2xl flex flex-col items-center gap-8">
@@ -77,6 +80,28 @@ export function WelcomeScreen({ onSelectAction, disabled }: WelcomeScreenProps) 
               die vollstaendige Angebotskalkulation fuer dich.
             </p>
           </div>
+        </div>
+
+        {/* Voice Agent CTA */}
+        {onStartVoiceAgent && (
+          <Button
+            onClick={onStartVoiceAgent}
+            disabled={disabled}
+            size="lg"
+            className="w-full max-w-sm gap-3 rounded-2xl py-6 text-base shadow-lg shadow-primary/20 transition-all hover:shadow-xl hover:shadow-primary/30 hover:scale-[1.02] active:scale-[0.98]"
+          >
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-foreground/20">
+              <Mic className="h-4 w-4" />
+            </div>
+            Voice Agent starten
+          </Button>
+        )}
+
+        {/* Divider */}
+        <div className="flex w-full items-center gap-4 max-w-sm">
+          <div className="h-px flex-1 bg-border" />
+          <span className="text-xs text-muted-foreground">oder waehle ein Template</span>
+          <div className="h-px flex-1 bg-border" />
         </div>
 
         {/* Quick Actions Grid */}

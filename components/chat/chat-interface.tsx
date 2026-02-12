@@ -6,8 +6,9 @@ import { MessageBubble } from "./message-bubble"
 import { QuoteProgressPanel } from "./quote-progress-panel"
 import { WelcomeScreen } from "./welcome-screen"
 import { ExcelPreviewDialog } from "./excel-preview-dialog"
-import { Download, PanelRightOpen, X, Eye, Mail } from "lucide-react"
+import { Download, PanelRightOpen, X, Eye, Mail, Mic } from "lucide-react"
 import { composeSalesEmail } from "@/lib/email/compose-sales-email"
+import { VoiceAgentOverlay } from "@/components/voice/voice-agent-overlay"
 import { Button } from "@/components/ui/button"
 import { createEmptyQuoteState } from "@/lib/store/quote-store"
 import type { QuoteState } from "@/lib/store/types"
@@ -31,6 +32,7 @@ export function ChatInterface() {
   const [isGenerating, setIsGenerating] = React.useState(false)
   const [showMobilePanel, setShowMobilePanel] = React.useState(false)
   const [showPreview, setShowPreview] = React.useState(false)
+  const [showVoiceAgent, setShowVoiceAgent] = React.useState(false)
   const scrollRef = React.useRef<HTMLDivElement>(null)
 
   const quoteStateRef = React.useRef(quoteState)
@@ -304,6 +306,13 @@ export function ChatInterface() {
     setShowPreview(false)
   }
 
+  const handleVoiceQuoteReady = React.useCallback(() => {
+    // After voice agent completes, trigger the demo flow through the chat
+    sendMessage(
+      "Kunde Alpentech Solutions GmbH in Wien moechte D365 Business Central einfuehren. 10 Essentials, 3 Premium, 15 Team Member, 5 Power BI Pro optional. EasyStarter Paket, FIBU und Warenwirtschaft Schulung, 15 Tage Implementierung, Go-Live Begleitung, PM Base. Trade365 und Intercompany Solution. Customer Service Essential. NAVAX Consulting AT, SaaS Cloud, Jaehrlich, Kostenstelle Wien, Kostentraeger Trade."
+    )
+  }, [sendMessage])
+
   const handleSendToSales = () => {
     const mailtoUrl = composeSalesEmail(quoteState)
     window.open(mailtoUrl, "_blank")
@@ -321,7 +330,11 @@ export function ChatInterface() {
           {/* Messages or Welcome */}
           <div ref={scrollRef} className="flex-1 overflow-y-auto scrollbar-thin">
             {isWelcome ? (
-              <WelcomeScreen onSelectAction={sendMessage} disabled={isLoading} />
+              <WelcomeScreen
+                onSelectAction={sendMessage}
+                onStartVoiceAgent={() => setShowVoiceAgent(true)}
+                disabled={isLoading}
+              />
             ) : (
               <div className="flex flex-col gap-5 px-4 py-6 lg:px-8">
                 {messages.map((message) => (
@@ -401,7 +414,21 @@ export function ChatInterface() {
 
           {/* Input */}
           <div className="shrink-0 border-t border-border bg-background px-4 py-4 lg:px-8">
-            <ChatInput onSend={sendMessage} onFileUpload={handleFileUpload} disabled={isLoading} />
+            <div className="flex items-end gap-2">
+              <div className="flex-1">
+                <ChatInput onSend={sendMessage} onFileUpload={handleFileUpload} disabled={isLoading} />
+              </div>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-[52px] w-11 shrink-0 rounded-2xl border-primary/30 text-primary hover:bg-primary hover:text-primary-foreground transition-colors"
+                onClick={() => setShowVoiceAgent(true)}
+                aria-label="Voice Agent starten"
+                title="Voice Agent"
+              >
+                <Mic className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </div>
 
@@ -443,6 +470,14 @@ export function ChatInterface() {
           </div>
         )}
       </div>
+
+      {/* Voice Agent Overlay */}
+      <VoiceAgentOverlay
+        open={showVoiceAgent}
+        onClose={() => setShowVoiceAgent(false)}
+        onQuoteReady={handleVoiceQuoteReady}
+        quoteState={quoteState}
+      />
 
       {/* Excel Preview Dialog */}
       <ExcelPreviewDialog
