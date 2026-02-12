@@ -1,3 +1,4 @@
+import { NextResponse } from "next/server"
 import type { QuoteState } from "@/lib/store/types"
 
 // NAVAX brand colors
@@ -837,7 +838,6 @@ export async function POST(req: Request) {
       },
     })
   } catch (error) {
-    console.error("[v0] Excel generation error:", error)
     return NextResponse.json({ error: "Excel-Generierung fehlgeschlagen" }, { status: 500 })
   }
 }
