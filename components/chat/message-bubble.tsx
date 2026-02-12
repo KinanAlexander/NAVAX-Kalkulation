@@ -15,73 +15,75 @@ interface ChatMessage {
 }
 
 const TOOL_LABELS: Record<string, string> = {
-  setHeaderField: "Kopfdaten gesetzt",
-  addLicensePosition: "Lizenz hinzugefuegt",
-  addServicePosition: "Dienstleistung hinzugefuegt",
-  addSolutionPosition: "Solution hinzugefuegt",
-  addCustomerServicePosition: "Customer Service hinzugefuegt",
-  setLegalTerms: "Konditionen gesetzt",
+  setHeaderField: "Kopfdaten",
+  addLicensePosition: "Lizenz",
+  addServicePosition: "Dienstleistung",
+  addSolutionPosition: "Solution",
+  addCustomerServicePosition: "Customer Service",
+  setLegalTerms: "Konditionen",
   getQuoteSummary: "Zusammenfassung",
-  generateExcel: "Excel generiert",
+  generateExcel: "Excel",
 }
 
 function renderMarkdown(text: string) {
-  // Simple markdown rendering: bold, lists, horizontal rules
   const lines = text.split("\n")
   const elements: React.ReactNode[] = []
 
   for (let i = 0; i < lines.length; i++) {
     let line = lines[i]
 
-    // Horizontal rule
     if (line.trim() === "---") {
-      elements.push(<hr key={i} className="my-3 border-border/50" />)
+      elements.push(
+        <hr key={i} className="my-3 border-border/40" />
+      )
       continue
     }
 
-    // Empty line
     if (line.trim() === "") {
-      elements.push(<div key={i} className="h-2" />)
+      elements.push(<div key={i} className="h-1.5" />)
       continue
     }
 
-    // List items (numbered or bullet)
     const numberedMatch = line.match(/^(\d+)\.\s+(.+)/)
     const bulletMatch = line.match(/^[-*]\s+(.+)/)
 
     if (numberedMatch) {
-      line = numberedMatch[2]
       elements.push(
         <div key={i} className="flex gap-2 pl-1">
-          <span className="shrink-0 text-muted-foreground">{numberedMatch[1]}.</span>
-          <span dangerouslySetInnerHTML={{ __html: boldify(line) }} />
+          <span className="shrink-0 text-muted-foreground font-mono text-[11px] pt-px">
+            {numberedMatch[1]}.
+          </span>
+          <span
+            className="flex-1"
+            dangerouslySetInnerHTML={{ __html: boldify(numberedMatch[2]) }}
+          />
         </div>
       )
       continue
     }
 
     if (bulletMatch) {
-      line = bulletMatch[1]
       elements.push(
         <div key={i} className="flex gap-2 pl-1">
-          <span className="shrink-0 text-muted-foreground">-</span>
-          <span dangerouslySetInnerHTML={{ __html: boldify(line) }} />
+          <span className="shrink-0 mt-1.5 h-1.5 w-1.5 rounded-full bg-secondary/60" />
+          <span
+            className="flex-1"
+            dangerouslySetInnerHTML={{ __html: boldify(bulletMatch[1]) }}
+          />
         </div>
       )
       continue
     }
 
-    // Headings
     if (line.startsWith("**") && line.endsWith("**")) {
       elements.push(
-        <p key={i} className="font-semibold mt-1">
+        <p key={i} className="font-semibold text-foreground mt-2 first:mt-0">
           {line.replace(/\*\*/g, "")}
         </p>
       )
       continue
     }
 
-    // Regular text with bold
     elements.push(
       <p key={i} dangerouslySetInnerHTML={{ __html: boldify(line) }} />
     )
@@ -91,58 +93,82 @@ function renderMarkdown(text: string) {
 }
 
 function boldify(text: string): string {
-  return text.replace(/\*\*(.+?)\*\*/g, '<strong class="font-semibold text-foreground">$1</strong>')
+  return text.replace(
+    /\*\*(.+?)\*\*/g,
+    '<strong class="font-semibold text-foreground">$1</strong>'
+  )
+}
+
+// Deduplicate tool badges by name
+function deduplicateTools(
+  tools: ChatMessage["toolResults"]
+): { name: string; count: number }[] {
+  if (!tools) return []
+  const map = new Map<string, number>()
+  for (const t of tools) {
+    map.set(t.toolName, (map.get(t.toolName) || 0) + 1)
+  }
+  return Array.from(map.entries()).map(([name, count]) => ({ name, count }))
 }
 
 export function MessageBubble({ message }: { message: ChatMessage }) {
   const isUser = message.role === "user"
+  const toolGroups = deduplicateTools(message.toolResults)
 
   return (
-    <div className={cn("flex gap-3", isUser && "justify-end")}>
+    <div
+      className={cn(
+        "flex gap-3 animate-in fade-in-0 slide-in-from-bottom-2 duration-300",
+        isUser && "justify-end"
+      )}
+    >
       {!isUser && (
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-secondary text-secondary-foreground">
-          <Sparkles className="h-4 w-4" />
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary/80 to-secondary/80 text-primary-foreground shadow-sm">
+          <Sparkles className="h-3.5 w-3.5" />
         </div>
       )}
 
-      <div className={cn("flex max-w-[85%] flex-col gap-2", isUser && "items-end")}>
-        {/* Tool results badges */}
-        {!isUser && message.toolResults && message.toolResults.length > 0 && (
+      <div className={cn("flex max-w-[80%] flex-col gap-2", isUser && "items-end")}>
+        {/* Tool badges */}
+        {!isUser && toolGroups.length > 0 && (
           <div className="flex flex-wrap gap-1.5">
-            {message.toolResults.map((tr, i) => (
+            {toolGroups.map((tg) => (
               <span
-                key={`${tr.toolName}-${i}`}
-                className="inline-flex items-center gap-1 rounded-md bg-secondary/10 px-2 py-0.5 text-xs text-secondary"
+                key={tg.name}
+                className="inline-flex items-center gap-1 rounded-full bg-secondary/10 px-2.5 py-0.5 text-[11px] font-medium text-secondary ring-1 ring-secondary/20"
               >
                 <CheckCircle2 className="h-3 w-3" />
-                {TOOL_LABELS[tr.toolName] || tr.toolName}
+                {TOOL_LABELS[tg.name] || tg.name}
+                {tg.count > 1 && (
+                  <span className="ml-0.5 rounded-full bg-secondary/20 px-1.5 text-[10px] font-bold">
+                    {tg.count}
+                  </span>
+                )}
               </span>
             ))}
           </div>
         )}
 
-        {/* Message text */}
+        {/* Message */}
         <div
           className={cn(
-            "rounded-xl px-4 py-3 text-sm leading-relaxed",
+            "rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm",
             isUser
               ? "bg-primary text-primary-foreground"
-              : "bg-muted text-foreground"
+              : "bg-card text-foreground ring-1 ring-border"
           )}
         >
           {isUser ? (
             <p className="whitespace-pre-wrap">{message.text}</p>
           ) : (
-            <div className="flex flex-col gap-0.5">
-              {renderMarkdown(message.text)}
-            </div>
+            <div className="flex flex-col gap-0.5">{renderMarkdown(message.text)}</div>
           )}
         </div>
       </div>
 
       {isUser && (
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
-          <User className="h-4 w-4" />
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm">
+          <User className="h-3.5 w-3.5" />
         </div>
       )}
     </div>

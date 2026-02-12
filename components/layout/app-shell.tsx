@@ -55,21 +55,26 @@ export function AppShell({ children }: AppShellProps) {
       {/* Sidebar */}
       <aside
         className={cn(
-          "flex h-screen flex-col border-r border-sidebar-border bg-sidebar transition-all duration-300",
-          collapsed ? "w-16" : "w-64"
+          "flex h-screen flex-col border-r border-sidebar-border bg-sidebar transition-all duration-300 ease-in-out",
+          collapsed ? "w-16" : "w-60"
         )}
       >
         {/* Logo */}
-        <div className="flex h-14 items-center justify-between border-b border-sidebar-border px-3">
+        <div
+          className={cn(
+            "flex h-14 items-center border-b border-sidebar-border",
+            collapsed ? "justify-center px-2" : "justify-between px-4"
+          )}
+        >
           {!collapsed && (
             <Link href="/" className="shrink-0">
-              <NavaxLogo variant="brand" width={100} />
+              <NavaxLogo variant="brand" width={96} />
             </Link>
           )}
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8 shrink-0 text-sidebar-foreground hover:bg-sidebar-accent"
+            className="h-8 w-8 shrink-0 text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent"
             onClick={() => setCollapsed(!collapsed)}
             aria-label={collapsed ? "Sidebar aufklappen" : "Sidebar zuklappen"}
           >
@@ -82,8 +87,8 @@ export function AppShell({ children }: AppShellProps) {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto px-2 py-3" aria-label="Hauptnavigation">
-          <ul className="flex flex-col gap-0.5">
+        <nav className="flex-1 overflow-y-auto px-2 py-4" aria-label="Hauptnavigation">
+          <ul className="flex flex-col gap-1">
             {navItems.map((item) => {
               const isActive = pathname === item.href
               const Icon = item.icon
@@ -92,13 +97,15 @@ export function AppShell({ children }: AppShellProps) {
                   <Link
                     href={item.href}
                     className={cn(
-                      "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent",
-                      isActive && "bg-sidebar-accent text-sidebar-primary",
+                      "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150",
+                      isActive
+                        ? "bg-sidebar-accent text-sidebar-primary shadow-sm"
+                        : "text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
                       collapsed && "justify-center px-0"
                     )}
                     title={collapsed ? item.label : undefined}
                   >
-                    <Icon className="h-4 w-4 shrink-0" />
+                    <Icon className={cn("h-4 w-4 shrink-0", isActive && "text-sidebar-primary")} />
                     {!collapsed && <span className="flex-1">{item.label}</span>}
                   </Link>
                 </li>
@@ -108,12 +115,12 @@ export function AppShell({ children }: AppShellProps) {
         </nav>
 
         {/* Dark mode toggle */}
-        <div className={cn("border-t border-sidebar-border px-2 py-2", collapsed && "px-2")}>
+        <div className="border-t border-sidebar-border px-2 py-2">
           {mounted && (
             <button
               onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
               className={cn(
-                "flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent",
+                "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-sidebar-foreground/70 transition-all duration-150 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
                 collapsed && "justify-center px-0"
               )}
               title={collapsed ? (theme === "dark" ? "Light Mode" : "Dark Mode") : undefined}
@@ -141,7 +148,7 @@ export function AppShell({ children }: AppShellProps) {
               collapsed && "justify-center"
             )}
           >
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary to-secondary text-xs font-bold text-primary-foreground shadow-sm">
               NB
             </div>
             {!collapsed && (
@@ -149,7 +156,7 @@ export function AppShell({ children }: AppShellProps) {
                 <p className="truncate text-sm font-medium text-sidebar-foreground">
                   NAVAX Berater
                 </p>
-                <p className="truncate text-xs text-sidebar-foreground/60">
+                <p className="truncate text-[11px] text-sidebar-foreground/50">
                   berater@navax.com
                 </p>
               </div>
@@ -158,7 +165,7 @@ export function AppShell({ children }: AppShellProps) {
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7 shrink-0 text-sidebar-foreground/60 hover:text-sidebar-foreground"
+                className="h-7 w-7 shrink-0 text-sidebar-foreground/40 hover:text-sidebar-foreground"
                 aria-label="Abmelden"
               >
                 <LogOut className="h-3.5 w-3.5" />

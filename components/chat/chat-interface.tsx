@@ -4,7 +4,9 @@ import * as React from "react"
 import { ChatInput } from "./chat-input"
 import { MessageBubble } from "./message-bubble"
 import { QuoteProgressPanel } from "./quote-progress-panel"
-import { Sparkles, Download, PanelRightOpen, X } from "lucide-react"
+import { WelcomeScreen } from "./welcome-screen"
+import { ExcelPreviewDialog } from "./excel-preview-dialog"
+import { Download, PanelRightOpen, X, Eye } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { createEmptyQuoteState } from "@/lib/store/quote-store"
 import type { QuoteState } from "@/lib/store/types"
@@ -27,6 +29,7 @@ export function ChatInterface() {
   const [isLoading, setIsLoading] = React.useState(false)
   const [isGenerating, setIsGenerating] = React.useState(false)
   const [showMobilePanel, setShowMobilePanel] = React.useState(false)
+  const [showPreview, setShowPreview] = React.useState(false)
   const scrollRef = React.useRef<HTMLDivElement>(null)
 
   const quoteStateRef = React.useRef(quoteState)
@@ -45,12 +48,17 @@ export function ChatInterface() {
     }
   }, [messages])
 
-  // Check if we have enough data to generate
   const hasMinimumFields =
     !!quoteState.header.unternehmensname &&
     !!quoteState.header.angebotstitel &&
     !!quoteState.header.sprache &&
     !!quoteState.header.angebotImMandant
+
+  const totalPositions =
+    quoteState.licenses.length +
+    quoteState.services.length +
+    quoteState.solutions.length +
+    quoteState.customerService.length
 
   const applyToolResults = React.useCallback(
     (toolResults: ChatMessage["toolResults"]) => {
@@ -76,10 +84,10 @@ export function ChatInterface() {
 
           if (tr.toolName === "addLicensePosition") {
             const pos = result.position as Record<string, unknown>
-            const alreadyExists = next.licenses.some(
+            const exists = next.licenses.some(
               (l) => l.product === pos.product && l.category === pos.category
             )
-            if (!alreadyExists) {
+            if (!exists) {
               next = {
                 ...next,
                 licenses: [
@@ -102,8 +110,8 @@ export function ChatInterface() {
 
           if (tr.toolName === "addServicePosition") {
             const pos = result.position as Record<string, unknown>
-            const alreadyExists = next.services.some((s) => s.description === pos.description)
-            if (!alreadyExists) {
+            const exists = next.services.some((s) => s.description === pos.description)
+            if (!exists) {
               next = {
                 ...next,
                 services: [
@@ -126,8 +134,8 @@ export function ChatInterface() {
 
           if (tr.toolName === "addSolutionPosition") {
             const pos = result.position as Record<string, unknown>
-            const alreadyExists = next.solutions.some((s) => s.name === pos.name)
-            if (!alreadyExists) {
+            const exists = next.solutions.some((s) => s.name === pos.name)
+            if (!exists) {
               const priceMap: Record<number, number> = { 1: 540, 2: 1530, 3: 2680, 4: 0 }
               next = {
                 ...next,
@@ -148,10 +156,10 @@ export function ChatInterface() {
 
           if (tr.toolName === "addCustomerServicePosition") {
             const pos = result.position as Record<string, unknown>
-            const alreadyExists = next.customerService.some(
+            const exists = next.customerService.some(
               (c) => c.package === (pos.packageName || pos.package)
             )
-            if (!alreadyExists) {
+            if (!exists) {
               next = {
                 ...next,
                 customerService: [
@@ -203,8 +211,6 @@ export function ChatInterface() {
       setIsLoading(true)
 
       try {
-        const currentQuoteState = quoteStateRef.current
-
         const res = await fetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -213,7 +219,7 @@ export function ChatInterface() {
               role: m.role,
               parts: [{ type: "text", text: m.text }],
             })),
-            quoteState: currentQuoteState,
+            quoteState: quoteStateRef.current,
           }),
         })
 
@@ -256,8 +262,7 @@ export function ChatInterface() {
 
   const handleFileUpload = async (file: File) => {
     const text = await file.text()
-    const prefix = `[Hochgeladene Datei: ${file.name}]\n\n`
-    sendMessage(prefix + text)
+    sendMessage(`[Hochgeladene Datei: ${file.name}]\n\n${text}`)
     toast.success(`Datei "${file.name}" hochgeladen`)
   }
 
@@ -282,7 +287,8 @@ export function ChatInterface() {
       URL.revokeObjectURL(url)
 
       setQuoteState((prev) => ({ ...prev, status: "generated" }))
-      toast.success("Excel erfolgreich generiert und heruntergeladen!")
+      setShowPreview(false)
+      toast.success("Excel erfolgreich generiert!")
     } catch {
       toast.error("Fehler bei der Excel-Generierung.")
     } finally {
@@ -294,140 +300,140 @@ export function ChatInterface() {
     setMessages([])
     setQuoteState(createEmptyQuoteState())
     setShowMobilePanel(false)
+    setShowPreview(false)
   }
 
+  const isWelcome = messages.length === 0
+
   return (
-    <div className="flex flex-1 gap-0 overflow-hidden relative">
-      {/* Chat area */}
-      <div className="flex flex-1 flex-col overflow-hidden">
-        {/* Messages */}
-        <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-6 lg:px-8">
-          {messages.length === 0 ? (
-            <div className="flex h-full flex-col items-center justify-center gap-4 text-center">
-              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-secondary/10">
-                <Sparkles className="h-8 w-8 text-secondary" />
-              </div>
-              <div>
-                <h2 className="text-lg font-semibold text-foreground font-heading text-balance">
-                  Neues Angebot erstellen
-                </h2>
-                <p className="mt-1.5 max-w-md text-sm text-muted-foreground leading-relaxed">
-                  Beschreibe dein Kundenmeeting in natuerlicher Sprache. Ich extrahiere alle
-                  relevanten Informationen und erstelle die Angebotskalkulation fuer dich.
-                </p>
-              </div>
-              <div className="flex flex-wrap justify-center gap-2 mt-2">
-                {[
-                  "Kunde Musterfirma GmbH moechte D365 Business Central mit 10 Essentials-Lizenzen, Cloud, Wien",
-                  "CRM-Projekt fuer Bauunternehmen in Graz, 5 Sales Enterprise Lizenzen plus Schulung",
-                  "EasyStarter Paket mit Power BI Workshop fuer Firma Alpentech in Linz",
-                ].map((example) => (
-                  <button
-                    key={example}
-                    onClick={() => sendMessage(example)}
-                    disabled={isLoading}
-                    className="rounded-lg border border-border bg-muted/50 px-3 py-2 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground text-left disabled:opacity-50"
-                  >
-                    {example}
-                  </button>
+    <>
+      <div className="flex flex-1 gap-0 overflow-hidden relative">
+        {/* Chat area */}
+        <div className="flex flex-1 flex-col overflow-hidden">
+          {/* Messages or Welcome */}
+          <div ref={scrollRef} className="flex-1 overflow-y-auto scrollbar-thin">
+            {isWelcome ? (
+              <WelcomeScreen onSelectAction={sendMessage} disabled={isLoading} />
+            ) : (
+              <div className="flex flex-col gap-5 px-4 py-6 lg:px-8">
+                {messages.map((message) => (
+                  <MessageBubble key={message.id} message={message} />
                 ))}
-              </div>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-4">
-              {messages.map((message) => (
-                <MessageBubble key={message.id} message={message} />
-              ))}
-              {isLoading && (
-                <div className="flex gap-3">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-secondary text-secondary-foreground">
-                    <Sparkles className="h-4 w-4" />
-                  </div>
-                  <div className="rounded-xl bg-muted px-4 py-3">
-                    <div className="flex gap-1">
-                      <span className="h-2 w-2 animate-bounce rounded-full bg-muted-foreground/40 [animation-delay:0ms]" />
-                      <span className="h-2 w-2 animate-bounce rounded-full bg-muted-foreground/40 [animation-delay:150ms]" />
-                      <span className="h-2 w-2 animate-bounce rounded-full bg-muted-foreground/40 [animation-delay:300ms]" />
+                {isLoading && (
+                  <div className="flex gap-3 items-start">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary/80 to-secondary/80 text-primary-foreground">
+                      <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                    </div>
+                    <div className="rounded-2xl bg-muted/70 px-4 py-3">
+                      <div className="flex gap-1.5">
+                        <span className="h-2 w-2 animate-bounce rounded-full bg-muted-foreground/40 [animation-delay:0ms]" />
+                        <span className="h-2 w-2 animate-bounce rounded-full bg-muted-foreground/40 [animation-delay:150ms]" />
+                        <span className="h-2 w-2 animate-bounce rounded-full bg-muted-foreground/40 [animation-delay:300ms]" />
+                      </div>
                     </div>
                   </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Action bar */}
+          {hasMinimumFields && (
+            <div className="shrink-0 border-t border-border bg-card/80 backdrop-blur-sm px-4 py-3 lg:px-8">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex flex-col gap-0.5 min-w-0">
+                  <span className="text-sm font-semibold text-foreground truncate font-heading">
+                    {quoteState.header.angebotstitel || "Angebot"}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    {totalPositions} Positionen -- {quoteState.header.unternehmensname}
+                  </span>
                 </div>
-              )}
+                <div className="flex items-center gap-2 shrink-0">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="lg:hidden"
+                    onClick={() => setShowMobilePanel(true)}
+                  >
+                    <PanelRightOpen className="h-4 w-4 mr-1.5" />
+                    Details
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowPreview(true)}
+                  >
+                    <Eye className="h-4 w-4 mr-1.5" />
+                    <span className="hidden sm:inline">Vorschau</span>
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={handleGenerateExcel}
+                    disabled={isGenerating}
+                  >
+                    <Download className="h-4 w-4 mr-1.5" />
+                    {isGenerating ? "Generiere..." : "Excel herunterladen"}
+                  </Button>
+                </div>
+              </div>
             </div>
           )}
+
+          {/* Input */}
+          <div className="shrink-0 border-t border-border bg-background px-4 py-4 lg:px-8">
+            <ChatInput onSend={sendMessage} onFileUpload={handleFileUpload} disabled={isLoading} />
+          </div>
         </div>
 
-        {/* Excel generate bar -- shown when quote has data, visible on all screens */}
-        {hasMinimumFields && (
-          <div className="border-t border-border bg-muted/50 px-4 py-3 flex items-center justify-between gap-3 lg:px-8">
-            <div className="flex flex-col gap-0.5 min-w-0">
-              <span className="text-sm font-medium text-foreground truncate">
-                {quoteState.header.angebotstitel || "Angebot"}
-              </span>
-              <span className="text-xs text-muted-foreground">
-                {quoteState.licenses.length} Lizenzen, {quoteState.services.length} DL-Positionen
-              </span>
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <Button
-                variant="outline"
-                size="sm"
-                className="lg:hidden"
-                onClick={() => setShowMobilePanel(true)}
-              >
-                <PanelRightOpen className="h-4 w-4 mr-1.5" />
-                Details
-              </Button>
-              <Button
-                size="sm"
-                onClick={handleGenerateExcel}
-                disabled={isGenerating}
-              >
-                <Download className="h-4 w-4 mr-1.5" />
-                {isGenerating ? "Generiere..." : "Excel herunterladen"}
-              </Button>
+        {/* Progress panel - desktop */}
+        <div className="hidden w-80 shrink-0 border-l border-border bg-card/50 lg:flex lg:flex-col overflow-y-auto scrollbar-thin p-4">
+          <QuoteProgressPanel
+            quoteState={quoteState}
+            onGenerateExcel={handleGenerateExcel}
+            isGenerating={isGenerating}
+            onNewQuote={handleNewQuote}
+          />
+        </div>
+
+        {/* Progress panel - mobile overlay */}
+        {showMobilePanel && (
+          <div className="absolute inset-0 z-50 flex lg:hidden">
+            <div
+              className="absolute inset-0 bg-background/80 backdrop-blur-sm"
+              onClick={() => setShowMobilePanel(false)}
+            />
+            <div className="relative ml-auto w-80 max-w-[85vw] bg-card border-l border-border p-4 overflow-y-auto shadow-xl animate-in slide-in-from-right">
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-sm font-semibold text-foreground font-heading">
+                  Angebotsdetails
+                </span>
+                <Button variant="ghost" size="icon" onClick={() => setShowMobilePanel(false)}>
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+              <QuoteProgressPanel
+                quoteState={quoteState}
+                onGenerateExcel={handleGenerateExcel}
+                isGenerating={isGenerating}
+                onNewQuote={handleNewQuote}
+              />
             </div>
           </div>
         )}
-
-        {/* Input */}
-        <div className="border-t border-border bg-background p-4 lg:px-8">
-          <ChatInput onSend={sendMessage} onFileUpload={handleFileUpload} disabled={isLoading} />
-        </div>
       </div>
 
-      {/* Progress panel - desktop */}
-      <div className="hidden w-80 shrink-0 border-l border-border bg-background p-4 lg:block overflow-y-auto">
-        <QuoteProgressPanel
-          quoteState={quoteState}
-          onGenerateExcel={handleGenerateExcel}
-          isGenerating={isGenerating}
-          onNewQuote={handleNewQuote}
-        />
-      </div>
-
-      {/* Progress panel - mobile overlay */}
-      {showMobilePanel && (
-        <div className="absolute inset-0 z-50 flex lg:hidden">
-          <div
-            className="absolute inset-0 bg-background/80 backdrop-blur-sm"
-            onClick={() => setShowMobilePanel(false)}
-          />
-          <div className="relative ml-auto w-80 max-w-[85vw] bg-background border-l border-border p-4 overflow-y-auto shadow-xl animate-in slide-in-from-right">
-            <div className="flex items-center justify-between mb-4">
-              <span className="text-sm font-semibold text-foreground">Angebotsdetails</span>
-              <Button variant="ghost" size="icon" onClick={() => setShowMobilePanel(false)}>
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-            <QuoteProgressPanel
-              quoteState={quoteState}
-              onGenerateExcel={handleGenerateExcel}
-              isGenerating={isGenerating}
-              onNewQuote={handleNewQuote}
-            />
-          </div>
-        </div>
-      )}
-    </div>
+      {/* Excel Preview Dialog */}
+      <ExcelPreviewDialog
+        open={showPreview}
+        onOpenChange={setShowPreview}
+        quoteState={quoteState}
+        onDownload={handleGenerateExcel}
+        isGenerating={isGenerating}
+      />
+    </>
   )
 }

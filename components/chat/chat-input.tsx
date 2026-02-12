@@ -55,20 +55,11 @@ export function ChatInput({ onSend, onFileUpload, disabled, className }: ChatInp
       for (let i = 0; i < event.results.length; i++) {
         transcript += event.results[i][0].transcript
       }
-      setInput((prev) => {
-        // Replace any previous speech content with updated transcript
-        const base = prev.includes("[...]") ? prev.split("[...]")[0] : prev
-        return base + transcript
-      })
+      setInput(transcript)
     }
 
-    recognition.onerror = () => {
-      setIsListening(false)
-    }
-
-    recognition.onend = () => {
-      setIsListening(false)
-    }
+    recognition.onerror = () => setIsListening(false)
+    recognition.onend = () => setIsListening(false)
 
     recognition.start()
     setIsListening(true)
@@ -100,24 +91,24 @@ export function ChatInput({ onSend, onFileUpload, disabled, className }: ChatInp
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (file && onFileUpload) {
-      onFileUpload(file)
-    }
-    if (fileInputRef.current) {
-      fileInputRef.current.value = ""
-    }
+    if (file && onFileUpload) onFileUpload(file)
+    if (fileInputRef.current) fileInputRef.current.value = ""
   }
 
   return (
     <form
       onSubmit={handleSubmit}
-      className={cn("flex items-end gap-2 rounded-xl border border-border bg-card p-3", className)}
+      className={cn(
+        "flex items-end gap-2 rounded-2xl border border-border bg-card p-2 shadow-sm transition-shadow focus-within:shadow-md focus-within:ring-1 focus-within:ring-ring/20",
+        isListening && "ring-2 ring-destructive/30",
+        className
+      )}
     >
       <Button
         type="button"
         variant="ghost"
         size="icon"
-        className="h-9 w-9 shrink-0 text-muted-foreground hover:text-foreground"
+        className="h-9 w-9 shrink-0 rounded-xl text-muted-foreground hover:text-foreground"
         onClick={() => fileInputRef.current?.click()}
         aria-label="Datei anhaengen"
       >
@@ -138,8 +129,8 @@ export function ChatInput({ onSend, onFileUpload, disabled, className }: ChatInp
         onChange={(e) => setInput(e.target.value)}
         onInput={handleTextareaInput}
         onKeyDown={handleKeyDown}
-        placeholder="Beschreibe dein Meeting oder stelle eine Frage..."
-        className="min-h-[36px] max-h-[200px] flex-1 resize-none bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
+        placeholder={isListening ? "Ich hoere zu..." : "Beschreibe dein Meeting oder stelle eine Frage..."}
+        className="min-h-[36px] max-h-[200px] flex-1 resize-none bg-transparent py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
         rows={1}
         disabled={disabled}
       />
@@ -147,13 +138,11 @@ export function ChatInput({ onSend, onFileUpload, disabled, className }: ChatInp
       {speechSupported && (
         <Button
           type="button"
-          variant={isListening ? "default" : "ghost"}
+          variant={isListening ? "destructive" : "ghost"}
           size="icon"
           className={cn(
-            "h-9 w-9 shrink-0",
-            isListening
-              ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              : "text-muted-foreground hover:text-foreground"
+            "h-9 w-9 shrink-0 rounded-xl transition-all",
+            !isListening && "text-muted-foreground hover:text-foreground"
           )}
           onClick={toggleSpeech}
           aria-label={isListening ? "Aufnahme stoppen" : "Spracheingabe starten"}
@@ -165,7 +154,7 @@ export function ChatInput({ onSend, onFileUpload, disabled, className }: ChatInp
       <Button
         type="submit"
         size="icon"
-        className="h-9 w-9 shrink-0"
+        className="h-9 w-9 shrink-0 rounded-xl"
         disabled={disabled || !input.trim()}
         aria-label="Nachricht senden"
       >

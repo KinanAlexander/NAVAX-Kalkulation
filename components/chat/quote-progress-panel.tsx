@@ -2,10 +2,9 @@
 
 import * as React from "react"
 import { cn } from "@/lib/utils"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ProgressBar } from "@/components/ds/progress-bar"
 import { Button } from "@/components/ui/button"
-import { Download, Check, AlertCircle, Plus } from "lucide-react"
+import { Download, Check, Circle, Plus, Eye } from "lucide-react"
 import type { QuoteState } from "@/lib/store/types"
 
 interface QuoteProgressPanelProps {
@@ -95,7 +94,6 @@ export function QuoteProgressPanel({
   const totalSections = sections.length
   const overallPercent = Math.round((totalFilled / totalSections) * 100)
 
-  // Check if minimum required fields are set
   const header = quoteState.header
   const hasMinimumFields =
     !!header.unternehmensname &&
@@ -104,90 +102,106 @@ export function QuoteProgressPanel({
     !!header.angebotImMandant
 
   return (
-    <Card className={cn("flex flex-col", className)}>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-sm font-semibold text-foreground">
+    <div className={cn("flex flex-col gap-5", className)}>
+      {/* Title */}
+      <div>
+        <h3 className="text-sm font-semibold text-foreground font-heading">
           Angebotsfortschritt
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="flex flex-1 flex-col gap-4">
-        <ProgressBar
-          value={overallPercent}
-          label="Gesamt"
-          showValue
-          color={overallPercent >= 50 ? "success" : "primary"}
-        />
+        </h3>
+        <p className="text-xs text-muted-foreground mt-0.5">
+          {totalFilled} von {totalSections} Bereichen ausgefuellt
+        </p>
+      </div>
 
-        <div className="flex flex-col gap-3">
-          {sections.map((section) => {
-            const isDone = section.filled > 0
-            return (
-              <div key={section.label} className="flex flex-col gap-1">
-                <div className="flex items-center gap-2">
-                  {isDone ? (
-                    <Check className="h-3.5 w-3.5 shrink-0 text-success" />
-                  ) : (
-                    <AlertCircle className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+      {/* Progress bar */}
+      <ProgressBar
+        value={overallPercent}
+        label=""
+        showValue
+        color={overallPercent >= 50 ? "success" : "primary"}
+      />
+
+      {/* Sections */}
+      <div className="flex flex-col gap-1">
+        {sections.map((section) => {
+          const isDone = section.filled > 0
+          return (
+            <details
+              key={section.label}
+              className="group rounded-lg"
+              open={isDone && section.items.length > 0}
+            >
+              <summary className="flex cursor-pointer items-center gap-2.5 rounded-lg px-2 py-1.5 transition-colors hover:bg-muted/50 list-none [&::-webkit-details-marker]:hidden">
+                {isDone ? (
+                  <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-secondary/15">
+                    <Check className="h-3 w-3 text-secondary" />
+                  </div>
+                ) : (
+                  <div className="flex h-5 w-5 shrink-0 items-center justify-center">
+                    <Circle className="h-3.5 w-3.5 text-muted-foreground/40" />
+                  </div>
+                )}
+                <span
+                  className={cn(
+                    "flex-1 text-xs font-medium",
+                    isDone ? "text-foreground" : "text-muted-foreground"
                   )}
-                  <span
-                    className={cn(
-                      "text-xs font-medium",
-                      isDone ? "text-foreground" : "text-muted-foreground"
-                    )}
-                  >
-                    {section.label}
+                >
+                  {section.label}
+                </span>
+                {section.label === "Kopfdaten" && (
+                  <span className="text-[10px] text-muted-foreground font-mono tabular-nums">
+                    {section.filled}/{section.total}
                   </span>
-                  {section.label === "Kopfdaten" && (
-                    <span className="ml-auto text-xs text-muted-foreground font-mono">
-                      {section.filled}/{section.total}
+                )}
+                {section.label !== "Kopfdaten" && isDone && (
+                  <span className="text-[10px] text-muted-foreground font-mono tabular-nums">
+                    {section.filled}
+                  </span>
+                )}
+              </summary>
+              {section.items.length > 0 && (
+                <div className="ml-7 flex flex-col gap-0.5 pb-1 pt-0.5">
+                  {section.items.slice(0, 5).map((item, i) => (
+                    <span key={i} className="text-[11px] text-muted-foreground truncate leading-relaxed">
+                      {item}
+                    </span>
+                  ))}
+                  {section.items.length > 5 && (
+                    <span className="text-[11px] text-muted-foreground/60 italic">
+                      +{section.items.length - 5} weitere
                     </span>
                   )}
                 </div>
-                {section.items.length > 0 && (
-                  <div className="ml-6 flex flex-col gap-0.5">
-                    {section.items.slice(0, 4).map((item, i) => (
-                      <span key={i} className="text-xs text-muted-foreground truncate">
-                        {item}
-                      </span>
-                    ))}
-                    {section.items.length > 4 && (
-                      <span className="text-xs text-muted-foreground">
-                        +{section.items.length - 4} weitere
-                      </span>
-                    )}
-                  </div>
-                )}
-              </div>
-            )
-          })}
-        </div>
+              )}
+            </details>
+          )
+        })}
+      </div>
 
-        <div className="mt-auto pt-2">
-          <Button
-            className="w-full"
-            onClick={onGenerateExcel}
-            disabled={!hasMinimumFields || isGenerating}
-          >
-            <Download className="mr-2 h-4 w-4" />
-            {isGenerating ? "Wird generiert..." : "Excel generieren"}
+      {/* Actions */}
+      <div className="mt-auto flex flex-col gap-2 pt-2">
+        <Button
+          className="w-full"
+          onClick={onGenerateExcel}
+          disabled={!hasMinimumFields || isGenerating}
+          size="sm"
+        >
+          <Download className="mr-2 h-4 w-4" />
+          {isGenerating ? "Wird generiert..." : "Excel generieren"}
+        </Button>
+        {!hasMinimumFields && (
+          <p className="text-[11px] text-muted-foreground text-center leading-relaxed">
+            Mindestens Unternehmensname, Titel, Sprache und Mandant erforderlich
+          </p>
+        )}
+        {onNewQuote && (
+          <Button variant="outline" size="sm" className="w-full" onClick={onNewQuote}>
+            <Plus className="mr-2 h-4 w-4" />
+            Neues Angebot
           </Button>
-          {!hasMinimumFields && (
-            <p className="mt-2 text-xs text-muted-foreground text-center">
-              Mindestens Unternehmensname, Titel, Sprache und Mandant erforderlich
-            </p>
-          )}
-          {onNewQuote && (
-            <Button
-              variant="outline"
-              className="w-full mt-2"
-              onClick={onNewQuote}
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Neues Angebot
-            </Button>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+        )}
+      </div>
+    </div>
   )
 }

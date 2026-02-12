@@ -116,7 +116,6 @@ export async function POST(req: Request) {
 
     return Response.json({ text: responseText, toolResults: demoToolResults })
   } catch (error) {
-    console.error("[v0] Demo Chat API error:", error)
     return Response.json(
       { error: "Interner Serverfehler", details: String(error) },
       { status: 500 }
