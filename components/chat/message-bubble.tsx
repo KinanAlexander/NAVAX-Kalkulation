@@ -3,7 +3,7 @@
 import * as React from "react"
 import { cn } from "@/lib/utils"
 import type { UIMessage } from "ai"
-import { Bot, User, Wrench } from "lucide-react"
+import { Bot, User, Wrench, Check } from "lucide-react"
 
 function getUIMessageText(msg: UIMessage): string {
   if (!msg.parts || !Array.isArray(msg.parts)) return ""
@@ -22,14 +22,10 @@ export function MessageBubble({ message, className }: MessageBubbleProps) {
   const isUser = message.role === "user"
   const text = getUIMessageText(message)
 
-  // Collect tool call parts
+  // Collect tool invocation parts (AI SDK 6 format)
   const toolParts = message.parts?.filter(
-    (p) =>
-      p.type !== "text" &&
-      typeof p === "object" &&
-      "type" in p &&
-      (p.type as string).startsWith("tool-")
-  )
+    (p) => p.type === "tool-invocation"
+  ) ?? []
 
   return (
     <div
@@ -69,28 +65,41 @@ export function MessageBubble({ message, className }: MessageBubbleProps) {
           </div>
         )}
 
-        {toolParts && toolParts.length > 0 && (
+        {toolParts.length > 0 && (
           <div className="flex flex-col gap-1.5">
             {toolParts.map((part, idx) => {
-              const toolPart = part as Record<string, unknown>
-              const state = toolPart.state as string | undefined
-              const toolName = (toolPart.type as string).replace("tool-", "")
+              if (part.type !== "tool-invocation") return null
+              const { toolInvocation } = part
+              const toolName = toolInvocation.toolName
+              const state = part.state
+
+              // Friendly German labels for tool names
+              const toolLabels: Record<string, string> = {
+                setHeaderField: "Kopfdaten aktualisiert",
+                addLicensePosition: "Lizenzposition hinzugefuegt",
+                addServicePosition: "Dienstleistung hinzugefuegt",
+                addSolutionPosition: "NAVAX Solution hinzugefuegt",
+                addCustomerServicePosition: "Customer Service hinzugefuegt",
+                setLegalTerms: "Konditionen gesetzt",
+                getQuoteSummary: "Zusammenfassung",
+                generateExcel: "Excel generiert",
+              }
+
+              const label = toolLabels[toolName] || toolName
 
               if (state === "output-available") {
-                const output = toolPart.output as Record<string, unknown> | undefined
+                const output = toolInvocation.output as Record<string, unknown> | undefined
                 const msg = output?.message as string | undefined
 
-                if (msg) {
-                  return (
-                    <div
-                      key={idx}
-                      className="flex items-center gap-2 rounded-lg border border-border bg-accent/50 px-3 py-2 text-xs text-accent-foreground"
-                    >
-                      <Wrench className="h-3 w-3 shrink-0" />
-                      <span>{msg}</span>
-                    </div>
-                  )
-                }
+                return (
+                  <div
+                    key={idx}
+                    className="flex items-center gap-2 rounded-lg border border-secondary/30 bg-secondary/10 px-3 py-2 text-xs text-foreground"
+                  >
+                    <Check className="h-3 w-3 shrink-0 text-secondary" />
+                    <span>{msg || label}</span>
+                  </div>
+                )
               }
 
               if (state === "input-available" || state === "input-streaming") {
@@ -100,11 +109,7 @@ export function MessageBubble({ message, className }: MessageBubbleProps) {
                     className="flex items-center gap-2 rounded-lg border border-border bg-muted px-3 py-2 text-xs text-muted-foreground"
                   >
                     <Wrench className="h-3 w-3 shrink-0 animate-spin" />
-                    <span>
-                      {toolName === "generateExcel"
-                        ? "Excel wird generiert..."
-                        : `${toolName}...`}
-                    </span>
+                    <span>{label}...</span>
                   </div>
                 )
               }

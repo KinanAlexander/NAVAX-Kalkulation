@@ -2,7 +2,6 @@ import {
   convertToModelMessages,
   streamText,
   tool,
-  UIMessage,
   validateUIMessages,
   stepCountIs,
 } from "ai"
@@ -144,19 +143,19 @@ const tools = {
 
   getQuoteSummary: tool({
     description:
-      "Zeigt eine Zusammenfassung des aktuellen Angebotsstands. Verwende dieses Tool wenn der Nutzer den aktuellen Stand wissen moechte oder wenn du pruefen willst ob alle Pflichtfelder gesetzt sind.",
+      "Zeigt eine Zusammenfassung des aktuellen Angebotsstands. Verwende dieses Tool wenn der Nutzer den aktuellen Stand wissen moechte.",
     inputSchema: z.object({}),
     execute: async () => {
       return {
-        message:
-          "Bitte den Client-State verwenden um die Zusammenfassung anzuzeigen. Dieser Tool-Aufruf signalisiert dem Frontend, die aktuelle Zusammenfassung anzuzeigen.",
+        success: true,
+        message: "Zusammenfassung wird angezeigt.",
       }
     },
   }),
 
   generateExcel: tool({
     description:
-      "Generiert die finale Excel-Datei. Rufe dieses Tool auf wenn alle noeligen Daten gesammelt sind und der Nutzer bereit ist die Excel zu erstellen.",
+      "Generiert die finale Excel-Datei. Rufe dieses Tool auf wenn alle noetigen Daten gesammelt sind und der Nutzer bereit ist.",
     inputSchema: z.object({
       confirmGeneration: z
         .boolean()
@@ -168,28 +167,35 @@ const tools = {
       }
       return {
         success: true,
-        message:
-          "Excel-Generierung gestartet. Das Frontend wird die Datei erstellen und zum Download anbieten.",
+        message: "Excel-Generierung wird gestartet...",
         action: "GENERATE_EXCEL",
       }
     },
   }),
 } as const
 
-export type ChatToolsMessage = UIMessage
-
 export async function POST(req: Request) {
   const body = await req.json()
-  const { quoteState } = body
+
+  console.log("[v0] Chat API received body keys:", Object.keys(body))
+
+  const rawMessages = body.messages
+  const quoteState = body.quoteState
+
+  if (!rawMessages || !Array.isArray(rawMessages)) {
+    return new Response("Missing messages", { status: 400 })
+  }
 
   const messages = await validateUIMessages({
-    messages: body.messages,
+    messages: rawMessages,
     tools,
   })
 
   const contextPrompt = quoteState
     ? `\n\n## AKTUELLER ANGEBOTSSTAND\n${JSON.stringify(quoteState, null, 2)}`
     : ""
+
+  console.log("[v0] Streaming with", messages.length, "messages")
 
   const result = streamText({
     model: "openai/gpt-4o",

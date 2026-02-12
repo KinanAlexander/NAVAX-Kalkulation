@@ -4,16 +4,13 @@ import * as React from "react"
 import { useChat } from "@ai-sdk/react"
 import { DefaultChatTransport } from "ai"
 import type { UIMessage } from "ai"
-import { cn } from "@/lib/utils"
 import { ChatInput } from "./chat-input"
 import { MessageBubble } from "./message-bubble"
 import { QuoteProgressPanel } from "./quote-progress-panel"
-import { Bot, Sparkles } from "lucide-react"
+import { Sparkles } from "lucide-react"
 import { createEmptyQuoteState } from "@/lib/store/quote-store"
 import type { QuoteState } from "@/lib/store/types"
 import { toast } from "sonner"
-
-const transport = new DefaultChatTransport({ api: "/api/chat" })
 
 function getUIMessageText(msg: UIMessage): string {
   if (!msg.parts || !Array.isArray(msg.parts)) return ""
@@ -27,134 +24,156 @@ export function ChatInterface() {
   const [quoteState, setQuoteState] = React.useState<QuoteState>(createEmptyQuoteState)
   const [isGenerating, setIsGenerating] = React.useState(false)
   const scrollRef = React.useRef<HTMLDivElement>(null)
+  const quoteStateRef = React.useRef(quoteState)
+
+  // Keep ref in sync
+  React.useEffect(() => {
+    quoteStateRef.current = quoteState
+  }, [quoteState])
+
+  const transport = React.useMemo(
+    () =>
+      new DefaultChatTransport({
+        api: "/api/chat",
+        prepareSendMessagesRequest: ({ id, messages }) => ({
+          body: {
+            id,
+            messages,
+            quoteState: quoteStateRef.current,
+          },
+        }),
+      }),
+    []
+  )
 
   const { messages, sendMessage, status } = useChat({
     transport,
-    onToolCall({ toolCall }) {
-      if (toolCall.dynamic) return
+    onFinish(event) {
+      console.log("[v0] onFinish event:", JSON.stringify(event, null, 2))
+      // Process tool calls from the finished message to update quote state
+      if (event.message?.parts) {
+        for (const part of event.message.parts) {
+          if (part.type === "tool-invocation" && part.state === "output-available") {
+            const toolName = part.toolInvocation.toolName
+            const args = part.toolInvocation.args
+            const result = part.toolInvocation.output
 
-      // Process tool results to update quote state
-      const name = toolCall.toolName as string
-      const input = toolCall.input as Record<string, unknown>
+            console.log("[v0] Processing tool result:", toolName, args, result)
 
-      if (name === "setHeaderField") {
-        setQuoteState((prev) => ({
-          ...prev,
-          header: {
-            ...prev.header,
-            [input.field as string]: input.value as string,
-          },
-          customerName:
-            input.field === "unternehmensname"
-              ? (input.value as string)
-              : prev.customerName,
-          title:
-            input.field === "angebotstitel"
-              ? (input.value as string)
-              : prev.title,
-          updatedAt: new Date().toISOString(),
-        }))
-      }
+            if (toolName === "setHeaderField" && result?.success) {
+              setQuoteState((prev) => ({
+                ...prev,
+                header: {
+                  ...prev.header,
+                  [args.field as string]: args.value as string,
+                },
+                customerName:
+                  args.field === "unternehmensname"
+                    ? (args.value as string)
+                    : prev.customerName,
+                title:
+                  args.field === "angebotstitel"
+                    ? (args.value as string)
+                    : prev.title,
+                updatedAt: new Date().toISOString(),
+              }))
+            }
 
-      if (name === "addLicensePosition") {
-        setQuoteState((prev) => ({
-          ...prev,
-          licenses: [
-            ...prev.licenses,
-            {
-              id: `lic_${Date.now()}`,
-              category: input.category as string,
-              product: input.product as string,
-              quantity: input.quantity as number,
-              unitPrice: input.unitPrice as number,
-              discount: (input.discount as number) || 0,
-              total:
-                (input.quantity as number) *
-                (input.unitPrice as number) *
-                (1 - ((input.discount as number) || 0) / 100),
-              optional: (input.optional as boolean) || false,
-              articleNr: "",
-            },
-          ],
-          updatedAt: new Date().toISOString(),
-        }))
-      }
+            if (toolName === "addLicensePosition" && result?.success) {
+              setQuoteState((prev) => ({
+                ...prev,
+                licenses: [
+                  ...prev.licenses,
+                  {
+                    id: `lic_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+                    category: args.category as string,
+                    product: args.product as string,
+                    quantity: args.quantity as number,
+                    unitPrice: args.unitPrice as number,
+                    discount: (args.discount as number) || 0,
+                    total: result.position?.total ?? 0,
+                    optional: (args.optional as boolean) || false,
+                    articleNr: "",
+                  },
+                ],
+                updatedAt: new Date().toISOString(),
+              }))
+            }
 
-      if (name === "addServicePosition") {
-        setQuoteState((prev) => ({
-          ...prev,
-          services: [
-            ...prev.services,
-            {
-              id: `svc_${Date.now()}`,
-              category: input.category as string,
-              description: input.description as string,
-              unit: input.unit as "LT" | "STD",
-              quantity: input.quantity as number,
-              rate: input.rate as number,
-              discount: (input.discount as number) || 0,
-              total:
-                (input.quantity as number) *
-                (input.rate as number) *
-                (1 - ((input.discount as number) || 0) / 100),
-              optional: (input.optional as boolean) || false,
-            },
-          ],
-          updatedAt: new Date().toISOString(),
-        }))
-      }
+            if (toolName === "addServicePosition" && result?.success) {
+              setQuoteState((prev) => ({
+                ...prev,
+                services: [
+                  ...prev.services,
+                  {
+                    id: `svc_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+                    category: args.category as string,
+                    description: args.description as string,
+                    unit: args.unit as "LT" | "STD",
+                    quantity: args.quantity as number,
+                    rate: args.rate as number,
+                    discount: (args.discount as number) || 0,
+                    total: result.position?.total ?? 0,
+                    optional: (args.optional as boolean) || false,
+                  },
+                ],
+                updatedAt: new Date().toISOString(),
+              }))
+            }
 
-      if (name === "addSolutionPosition") {
-        const prices: Record<number, number> = { 1: 540, 2: 1530, 3: 2680, 4: 0 }
-        setQuoteState((prev) => ({
-          ...prev,
-          solutions: [
-            ...prev.solutions,
-            {
-              id: `sol_${Date.now()}`,
-              name: input.name as string,
-              priceCategory: input.priceCategory as 1 | 2 | 3 | 4,
-              flatRate: prices[(input.priceCategory as number) || 1] || 0,
-              additionalDl: (input.additionalDl as number) || 0,
-              articleNr: "",
-            },
-          ],
-          updatedAt: new Date().toISOString(),
-        }))
-      }
+            if (toolName === "addSolutionPosition" && result?.success) {
+              setQuoteState((prev) => ({
+                ...prev,
+                solutions: [
+                  ...prev.solutions,
+                  {
+                    id: `sol_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+                    name: args.name as string,
+                    priceCategory: args.priceCategory as 1 | 2 | 3 | 4,
+                    flatRate: result.position?.flatRate ?? 0,
+                    additionalDl: (args.additionalDl as number) || 0,
+                    articleNr: "",
+                  },
+                ],
+                updatedAt: new Date().toISOString(),
+              }))
+            }
 
-      if (name === "addCustomerServicePosition") {
-        setQuoteState((prev) => ({
-          ...prev,
-          customerService: [
-            ...prev.customerService,
-            {
-              id: `csv_${Date.now()}`,
-              package: input.package as string,
-              description: input.description as string,
-              monthlyFee: input.monthlyFee as number,
-              quantity: (input.quantity as number) || 1,
-            },
-          ],
-          updatedAt: new Date().toISOString(),
-        }))
-      }
+            if (toolName === "addCustomerServicePosition" && result?.success) {
+              setQuoteState((prev) => ({
+                ...prev,
+                customerService: [
+                  ...prev.customerService,
+                  {
+                    id: `csv_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+                    package: args.package as string,
+                    description: args.description as string,
+                    monthlyFee: args.monthlyFee as number,
+                    quantity: (args.quantity as number) || 1,
+                  },
+                ],
+                updatedAt: new Date().toISOString(),
+              }))
+            }
 
-      if (name === "setLegalTerms") {
-        setQuoteState((prev) => ({
-          ...prev,
-          legalTerms: {
-            nachlassLizenzenMs: (input.nachlassLizenzenMs as number) || 0,
-            nachlassLizenzenNavax: (input.nachlassLizenzenNavax as number) || 0,
-            nachlassDl: (input.nachlassDl as number) || 0,
-            zahlungsfrist: (input.zahlungsfrist as string) || "30 Tage",
-          },
-          updatedAt: new Date().toISOString(),
-        }))
-      }
+            if (toolName === "setLegalTerms" && result?.success) {
+              setQuoteState((prev) => ({
+                ...prev,
+                legalTerms: {
+                  nachlassLizenzenMs: (args.nachlassLizenzenMs as number) || 0,
+                  nachlassLizenzenNavax: (args.nachlassLizenzenNavax as number) || 0,
+                  nachlassDl: (args.nachlassDl as number) || 0,
+                  zahlungsfrist: (args.zahlungsfrist as string) || "30 Tage",
+                },
+                updatedAt: new Date().toISOString(),
+              }))
+            }
 
-      if (name === "generateExcel") {
-        handleGenerateExcel()
+            if (toolName === "generateExcel" && result?.success) {
+              handleGenerateExcel()
+            }
+          }
+        }
       }
     },
   })
@@ -167,13 +186,14 @@ export function ChatInterface() {
   }, [messages])
 
   const handleSend = (text: string) => {
-    sendMessage({ text }, { body: { quoteState } })
+    console.log("[v0] Sending message:", text)
+    sendMessage({ text })
   }
 
   const handleFileUpload = async (file: File) => {
     const text = await file.text()
     const prefix = `[Hochgeladene Datei: ${file.name}]\n\n`
-    sendMessage({ text: prefix + text }, { body: { quoteState } })
+    sendMessage({ text: prefix + text })
     toast.success(`Datei "${file.name}" hochgeladen`)
   }
 
@@ -252,21 +272,18 @@ export function ChatInterface() {
             <div className="flex flex-col gap-4">
               {messages.map((message) => {
                 const text = getUIMessageText(message)
-                const hasParts = message.parts?.some(
-                  (p) =>
-                    p.type !== "text" &&
-                    typeof p === "object" &&
-                    "type" in p
+                const hasToolParts = message.parts?.some(
+                  (p) => p.type === "tool-invocation"
                 )
-                if (!text && !hasParts) return null
+                if (!text && !hasToolParts) return null
                 return (
                   <MessageBubble key={message.id} message={message} />
                 )
               })}
-              {isStreaming && messages[messages.length - 1]?.role === "user" && (
+              {isStreaming && messages.length > 0 && messages[messages.length - 1]?.role === "user" && (
                 <div className="flex gap-3">
                   <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-secondary text-secondary-foreground">
-                    <Bot className="h-4 w-4" />
+                    <Sparkles className="h-4 w-4" />
                   </div>
                   <div className="rounded-xl bg-muted px-4 py-3">
                     <div className="flex gap-1">
