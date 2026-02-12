@@ -1,4 +1,3 @@
-import { NextResponse } from "next/server"
 import type { QuoteState } from "@/lib/store/types"
 
 // NAVAX brand colors
@@ -9,7 +8,7 @@ const LIGHT_GRAY = "FFF5F5F5"
 const MEDIUM_GRAY = "FFE0E0E0"
 const DARK_TEXT = "FF333333"
 
-function sectionHeaderStyle(wb: typeof import("exceljs")): Partial<import("exceljs").Style> {
+function sectionHeaderStyle(): Partial<import("exceljs").Style> {
   return {
     font: { bold: true, size: 11, color: { argb: WHITE } },
     fill: { type: "pattern", pattern: "solid", fgColor: { argb: NAVAX_MAGENTA } },
@@ -53,7 +52,7 @@ export async function POST(req: Request) {
     workbook.creator = "NAVAX Angebotskalkulation"
     workbook.created = new Date()
 
-    const hStyle = sectionHeaderStyle(ExcelJS)
+    const hStyle = sectionHeaderStyle()
     const shStyle = subHeaderStyle()
     const dStyle = dataStyle()
 
