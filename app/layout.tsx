@@ -1,6 +1,8 @@
 import React from "react"
 import type { Metadata } from 'next'
 import { Inter, DM_Sans, JetBrains_Mono } from 'next/font/google'
+import { ThemeProvider } from "@/components/theme-provider"
+import { Toaster } from "sonner"
 
 import './globals.css'
 
@@ -9,8 +11,8 @@ const _heading = DM_Sans({ subsets: ['latin'], weight: ['400', '500', '600', '70
 const _mono = JetBrains_Mono({ subsets: ['latin'], variable: '--font-mono' })
 
 export const metadata: Metadata = {
-  title: 'NAVAX',
-  description: 'NAVAX - Future-proof business solutions based on Microsoft technology',
+  title: 'NAVAX Angebotskalkulation',
+  description: 'KI-gestuetzter Angebotsassistent fuer NAVAX Sales-Berater',
 }
 
 export default function RootLayout({
@@ -19,9 +21,17 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en">
+    <html lang="de" suppressHydrationWarning>
       <body className={`${_inter.variable} ${_heading.variable} ${_mono.variable} font-sans antialiased`}>
-        {children}
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="light"
+          enableSystem
+          disableTransitionOnChange
+        >
+          {children}
+          <Toaster richColors position="top-right" />
+        </ThemeProvider>
       </body>
     </html>
   )
