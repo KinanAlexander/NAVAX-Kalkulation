@@ -13,7 +13,10 @@ import {
   ChevronLeft,
   ChevronRight,
   LogOut,
+  Moon,
+  Sun,
 } from "lucide-react"
+import { useTheme } from "next-themes"
 
 const navItems = [
   {
@@ -40,6 +43,12 @@ interface AppShellProps {
 export function AppShell({ children }: AppShellProps) {
   const pathname = usePathname()
   const [collapsed, setCollapsed] = React.useState(false)
+  const { theme, setTheme } = useTheme()
+  const [mounted, setMounted] = React.useState(false)
+
+  React.useEffect(() => {
+    setMounted(true)
+  }, [])
 
   return (
     <div className="flex h-screen bg-background text-foreground">
@@ -97,6 +106,32 @@ export function AppShell({ children }: AppShellProps) {
             })}
           </ul>
         </nav>
+
+        {/* Dark mode toggle */}
+        <div className={cn("border-t border-sidebar-border px-2 py-2", collapsed && "px-2")}>
+          {mounted && (
+            <button
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+              className={cn(
+                "flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent",
+                collapsed && "justify-center px-0"
+              )}
+              title={collapsed ? (theme === "dark" ? "Light Mode" : "Dark Mode") : undefined}
+              aria-label={theme === "dark" ? "Zu Light Mode wechseln" : "Zu Dark Mode wechseln"}
+            >
+              {theme === "dark" ? (
+                <Sun className="h-4 w-4 shrink-0" />
+              ) : (
+                <Moon className="h-4 w-4 shrink-0" />
+              )}
+              {!collapsed && (
+                <span className="flex-1 text-left">
+                  {theme === "dark" ? "Light Mode" : "Dark Mode"}
+                </span>
+              )}
+            </button>
+          )}
+        </div>
 
         {/* User section */}
         <div className="border-t border-sidebar-border p-3">
