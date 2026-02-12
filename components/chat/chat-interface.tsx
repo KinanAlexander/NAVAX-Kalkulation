@@ -75,9 +75,11 @@ export function ChatInterface() {
 
   // ---- Excel download trigger (used by generateExcel tool) ----
   const triggerExcelDownload = React.useCallback(async () => {
+    console.log("[v0] triggerExcelDownload called!")
     setIsGenerating(true)
     try {
       const currentState = quoteStateRef.current
+      console.log("[v0] Generating Excel with state:", currentState.header.unternehmensname, "positions:", currentState.licenses.length + currentState.services.length)
       const res = await fetch("/api/generate-excel", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -115,24 +117,61 @@ export function ChatInterface() {
     for (const msg of liveMessages) {
       if (msg.role !== "assistant" || !msg.parts) continue
       for (const part of msg.parts) {
+        // Log ALL part types to understand the structure
+        const partAny = part as Record<string, unknown>
+        if (partAny.type !== "text") {
+          console.log("[v0] Non-text part found:", JSON.stringify({
+            type: partAny.type,
+            state: partAny.state,
+            toolName: partAny.toolName,
+            toolCallId: partAny.toolCallId,
+            hasToolInvocation: "toolInvocation" in partAny,
+            hasOutput: "output" in partAny,
+            hasInput: "input" in partAny,
+            keys: Object.keys(partAny),
+          }))
+        }
+
+        // Try both possible structures:
+        // Structure A: part.type === "tool-invocation" with part.toolInvocation nested object
+        // Structure B: part.type starts with "tool-" and has .state, .output directly
+        let toolName: string | undefined
+        let toolCallId: string | undefined
+        let args: Record<string, unknown> | undefined
+        let state: string | undefined
+        let output: Record<string, unknown> | undefined
+
         if (
-          part.type === "tool-invocation" &&
-          "toolInvocation" in part &&
-          (part as Record<string, unknown>).toolInvocation
+          partAny.type === "tool-invocation" &&
+          "toolInvocation" in partAny &&
+          partAny.toolInvocation
         ) {
-          const inv = (part as Record<string, unknown>).toolInvocation as {
-            toolName: string
-            toolCallId?: string
-            args: Record<string, unknown>
-            state: string
-            output?: Record<string, unknown>
-          }
-          if (inv.state === "output-available" && inv.output) {
-            const uniqueId = inv.toolCallId || `${msg.id}_${inv.toolName}_${JSON.stringify(inv.args)}`
-            if (!processedToolIdsRef.current.has(uniqueId)) {
-              processedToolIdsRef.current.add(uniqueId)
-              applyToolResult(inv.toolName, inv.args, inv.output)
-            }
+          // Structure A: nested toolInvocation
+          const inv = partAny.toolInvocation as Record<string, unknown>
+          toolName = inv.toolName as string
+          toolCallId = inv.toolCallId as string | undefined
+          args = inv.args as Record<string, unknown>
+          state = inv.state as string
+          output = inv.output as Record<string, unknown> | undefined
+        } else if (
+          typeof partAny.type === "string" &&
+          partAny.type.startsWith("tool-") &&
+          "state" in partAny
+        ) {
+          // Structure B: direct properties on part
+          toolName = (partAny.type as string).replace("tool-", "")
+          toolCallId = partAny.toolCallId as string | undefined
+          args = (partAny.input as Record<string, unknown>) || {}
+          state = partAny.state as string
+          output = partAny.output as Record<string, unknown> | undefined
+        }
+
+        if (toolName && state === "output-available" && output) {
+          const uniqueId = toolCallId || `${msg.id}_${toolName}_${JSON.stringify(args)}`
+          if (!processedToolIdsRef.current.has(uniqueId)) {
+            console.log("[v0] Processing tool result:", toolName, "output:", JSON.stringify(output))
+            processedToolIdsRef.current.add(uniqueId)
+            applyToolResult(toolName, args || {}, output)
           }
         }
       }
@@ -148,29 +187,34 @@ export function ChatInterface() {
   }, [demoMessages, liveMessages])
 
   // ---- Computed ----
-  const hasMinimumFields =
-    !!quoteState.header.unternehmensname &&
-    !!quoteState.header.angebotstitel &&
-    !!quoteState.header.sprache &&
-    !!quoteState.header.angebotImMandant
-
   const totalPositions =
     quoteState.licenses.length +
     quoteState.services.length +
     quoteState.solutions.length +
     quoteState.customerService.length
 
-  // ---- Apply a single tool result to quoteState ----
-  // Track pending excel generation separately (side effects should not be inside state setters)
-  const pendingExcelRef = React.useRef(false)
+  const hasMinimumFields =
+    !!quoteState.header.unternehmensname ||
+    !!quoteState.header.angebotstitel ||
+    totalPositions > 0
 
+  // ---- Apply a single tool result to quoteState ----
   const applyToolResult = React.useCallback(
     (toolName: string, args: Record<string, unknown>, result: Record<string, unknown>) => {
-      if (!result.success) return
+      console.log("[v0] applyToolResult called:", toolName, "args:", JSON.stringify(args), "result:", JSON.stringify(result))
+      if (!result.success) {
+        console.log("[v0] Tool result not successful, skipping. result.success =", result.success, "typeof:", typeof result.success)
+        return
+      }
 
       // Handle generateExcel separately as a side effect (not inside state setter)
       if (toolName === "generateExcel") {
-        pendingExcelRef.current = true
+        console.log("[v0] generateExcel tool detected, triggering download directly")
+        // Trigger immediately with a small delay for state to settle
+        setTimeout(() => {
+          console.log("[v0] Calling triggerExcelDownload now")
+          triggerExcelDownload()
+        }, 1000)
         return
       }
 
@@ -301,19 +345,6 @@ export function ChatInterface() {
     []
   )
 
-  // Watch for pending Excel generation and trigger after state settles
-  React.useEffect(() => {
-    if (pendingExcelRef.current && !liveIsLoading) {
-      pendingExcelRef.current = false
-      // Give state time to settle, then trigger download
-      const timer = setTimeout(() => {
-        triggerExcelDownload()
-      }, 800)
-      return () => clearTimeout(timer)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [liveIsLoading, liveMessages])
-
   // ---- Apply batch tool results (demo mode) ----
   const applyToolResults = React.useCallback(
     (toolResults: DemoChatMessage["toolResults"]) => {
@@ -429,7 +460,6 @@ export function ChatInterface() {
     setShowMobilePanel(false)
     setShowPreview(false)
     processedToolIdsRef.current.clear()
-    pendingExcelRef.current = false
   }
 
   const handleVoiceSend = React.useCallback(
@@ -457,8 +487,25 @@ export function ChatInterface() {
     if (mode === "live") {
       return liveMessages.map((msg) => {
         const text = getUIMessageText(msg)
-        // Count tool invocations
-        const toolParts = msg.parts?.filter((p) => p.type === "tool-invocation") || []
+        // Extract tool results from parts (handle both AI SDK structures)
+        const toolResults: Array<{ toolName: string; args: Record<string, unknown>; result: Record<string, unknown> }> = []
+        for (const p of msg.parts || []) {
+          const pAny = p as Record<string, unknown>
+          if (pAny.type === "tool-invocation" && "toolInvocation" in pAny && pAny.toolInvocation) {
+            const inv = pAny.toolInvocation as Record<string, unknown>
+            toolResults.push({
+              toolName: (inv.toolName as string) || "unknown",
+              args: (inv.args as Record<string, unknown>) || {},
+              result: (inv.output as Record<string, unknown>) || {},
+            })
+          } else if (typeof pAny.type === "string" && pAny.type.startsWith("tool-") && pAny.type !== "text" && "state" in pAny) {
+            toolResults.push({
+              toolName: (pAny.type as string).replace("tool-", ""),
+              args: (pAny.input as Record<string, unknown>) || {},
+              result: (pAny.output as Record<string, unknown>) || {},
+            })
+          }
+        }
         return (
           <MessageBubble
             key={msg.id}
@@ -466,18 +513,7 @@ export function ChatInterface() {
               id: msg.id,
               role: msg.role as "user" | "assistant",
               text,
-              toolResults: toolParts.map((p) => {
-                const inv = (p as Record<string, unknown>).toolInvocation as {
-                  toolName: string
-                  args: Record<string, unknown>
-                  output?: Record<string, unknown>
-                } | undefined
-                return {
-                  toolName: inv?.toolName || "unknown",
-                  args: inv?.args || {},
-                  result: inv?.output || {},
-                }
-              }),
+              toolResults,
             }}
           />
         )
