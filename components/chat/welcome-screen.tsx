@@ -9,9 +9,6 @@ import {
   BarChart3,
   Zap,
   ArrowRight,
-  Mic,
-  Paperclip,
-  FileSpreadsheet,
 } from "lucide-react"
 
 interface QuickAction {
@@ -68,11 +65,8 @@ export function WelcomeScreen({ onSelectAction, disabled }: WelcomeScreenProps) 
       <div className="w-full max-w-2xl flex flex-col items-center gap-8">
         {/* Hero */}
         <div className="flex flex-col items-center gap-4 text-center">
-          <div className="relative">
-            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/20 to-secondary/20 ring-1 ring-primary/10">
-              <Sparkles className="h-8 w-8 text-primary" />
-            </div>
-            <div className="absolute -right-1 -top-1 h-4 w-4 rounded-full bg-secondary animate-pulse" />
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-md">
+            <Sparkles className="h-7 w-7" />
           </div>
           <div>
             <h1 className="text-2xl font-semibold text-foreground font-heading text-balance">
@@ -126,23 +120,7 @@ export function WelcomeScreen({ onSelectAction, disabled }: WelcomeScreenProps) 
           })}
         </div>
 
-        {/* Capabilities footer */}
-        <div className="flex flex-wrap items-center justify-center gap-4 text-xs text-muted-foreground">
-          <div className="flex items-center gap-1.5">
-            <Mic className="h-3.5 w-3.5" />
-            <span>Spracheingabe</span>
-          </div>
-          <div className="h-3 w-px bg-border" />
-          <div className="flex items-center gap-1.5">
-            <Paperclip className="h-3.5 w-3.5" />
-            <span>Datei-Upload</span>
-          </div>
-          <div className="h-3 w-px bg-border" />
-          <div className="flex items-center gap-1.5">
-            <FileSpreadsheet className="h-3.5 w-3.5" />
-            <span>Excel-Export</span>
-          </div>
-        </div>
+
       </div>
     </div>
   )

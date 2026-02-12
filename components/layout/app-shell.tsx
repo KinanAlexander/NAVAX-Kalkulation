@@ -66,24 +66,35 @@ export function AppShell({ children }: AppShellProps) {
             collapsed ? "justify-center px-2" : "justify-between px-4"
           )}
         >
-          {!collapsed && (
-            <Link href="/" className="shrink-0">
-              <NavaxLogo variant="brand" width={96} />
-            </Link>
-          )}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 shrink-0 text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent"
-            onClick={() => setCollapsed(!collapsed)}
-            aria-label={collapsed ? "Sidebar aufklappen" : "Sidebar zuklappen"}
-          >
+          <Link href="/" className="shrink-0">
             {collapsed ? (
-              <ChevronRight className="h-4 w-4" />
+              <NavaxLogo variant="brand" width={32} />
             ) : (
-              <ChevronLeft className="h-4 w-4" />
+              <NavaxLogo variant="brand" width={96} />
             )}
-          </Button>
+          </Link>
+          {!collapsed && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 shrink-0 text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent"
+              onClick={() => setCollapsed(!collapsed)}
+              aria-label="Sidebar zuklappen"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+          )}
+          {collapsed && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute left-16 top-3 z-10 h-8 w-8 rounded-full border border-sidebar-border bg-sidebar text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent shadow-sm"
+              onClick={() => setCollapsed(false)}
+              aria-label="Sidebar aufklappen"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          )}
         </div>
 
         {/* Navigation */}
