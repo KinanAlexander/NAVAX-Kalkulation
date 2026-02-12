@@ -5,13 +5,14 @@ import { cn } from "@/lib/utils"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ProgressBar } from "@/components/ds/progress-bar"
 import { Button } from "@/components/ui/button"
-import { Download, Check, AlertCircle } from "lucide-react"
+import { Download, Check, AlertCircle, Plus } from "lucide-react"
 import type { QuoteState } from "@/lib/store/types"
 
 interface QuoteProgressPanelProps {
   quoteState: QuoteState
   onGenerateExcel: () => void
   isGenerating?: boolean
+  onNewQuote?: () => void
   className?: string
 }
 
@@ -86,6 +87,7 @@ export function QuoteProgressPanel({
   quoteState,
   onGenerateExcel,
   isGenerating,
+  onNewQuote,
   className,
 }: QuoteProgressPanelProps) {
   const sections = getSections(quoteState)
@@ -173,6 +175,16 @@ export function QuoteProgressPanel({
             <p className="mt-2 text-xs text-muted-foreground text-center">
               Mindestens Unternehmensname, Titel, Sprache und Mandant erforderlich
             </p>
+          )}
+          {onNewQuote && (
+            <Button
+              variant="outline"
+              className="w-full mt-2"
+              onClick={onNewQuote}
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Neues Angebot
+            </Button>
           )}
         </div>
       </CardContent>

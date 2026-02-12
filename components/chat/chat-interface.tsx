@@ -1,9 +1,6 @@
 "use client"
 
 import * as React from "react"
-import { useChat } from "@ai-sdk/react"
-import { DefaultChatTransport } from "ai"
-import type { UIMessage } from "ai"
 import { ChatInput } from "./chat-input"
 import { MessageBubble } from "./message-bubble"
 import { QuoteProgressPanel } from "./quote-progress-panel"
@@ -12,88 +9,54 @@ import { createEmptyQuoteState } from "@/lib/store/quote-store"
 import type { QuoteState } from "@/lib/store/types"
 import { toast } from "sonner"
 
-function getUIMessageText(msg: UIMessage): string {
-  if (!msg.parts || !Array.isArray(msg.parts)) return ""
-  return msg.parts
-    .filter((p): p is { type: "text"; text: string } => p.type === "text")
-    .map((p) => p.text)
-    .join("")
+interface ChatMessage {
+  id: string
+  role: "user" | "assistant"
+  text: string
+  toolResults?: Array<{
+    toolName: string
+    args: Record<string, unknown>
+    result: Record<string, unknown>
+  }>
 }
 
 export function ChatInterface() {
+  const [messages, setMessages] = React.useState<ChatMessage[]>([])
   const [quoteState, setQuoteState] = React.useState<QuoteState>(createEmptyQuoteState)
+  const [isLoading, setIsLoading] = React.useState(false)
   const [isGenerating, setIsGenerating] = React.useState(false)
   const scrollRef = React.useRef<HTMLDivElement>(null)
-  const quoteStateRef = React.useRef(quoteState)
 
   React.useEffect(() => {
-    quoteStateRef.current = quoteState
-  }, [quoteState])
-
-  const transport = React.useMemo(
-    () =>
-      new DefaultChatTransport({
-        api: "/api/chat",
-        prepareSendMessagesRequest: ({ id, messages }) => {
-          console.log("[v0] Preparing request with", messages.length, "messages")
-          return {
-            body: {
-              id,
-              messages,
-              quoteState: quoteStateRef.current,
-            },
-          }
-        },
-      }),
-    []
-  )
-
-  const { messages, sendMessage, status, error } = useChat({
-    transport,
-  })
-
-  // Log errors
-  React.useEffect(() => {
-    if (error) {
-      console.log("[v0] useChat error:", error.message, error)
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight
     }
-  }, [error])
+  }, [messages])
 
-  // Process tool results from messages whenever they change
-  React.useEffect(() => {
-    for (const message of messages) {
-      if (message.role !== "assistant" || !message.parts) continue
-      for (const part of message.parts) {
-        if (part.type !== "tool-invocation") continue
-        if (part.state !== "output-available") continue
+  const processToolResults = React.useCallback(
+    (toolResults: ChatMessage["toolResults"]) => {
+      if (!toolResults) return
 
-        const toolName = part.toolInvocation.toolName
-        const args = part.toolInvocation.args as Record<string, unknown>
-        const result = part.toolInvocation.output as Record<string, unknown> | undefined
+      for (const tr of toolResults) {
+        const result = tr.result as Record<string, unknown>
+        if (!result.success) continue
 
-        if (!result?.success) continue
-
-        if (toolName === "setHeaderField") {
-          setQuoteState((prev) => {
-            const field = args.field as string
-            const value = args.value as string
-            const currentVal = prev.header[field as keyof typeof prev.header]
-            if (currentVal === value) return prev
-            return {
-              ...prev,
-              header: { ...prev.header, [field]: value },
-              customerName: field === "unternehmensname" ? value : prev.customerName,
-              title: field === "angebotstitel" ? value : prev.title,
-              updatedAt: new Date().toISOString(),
-            }
-          })
+        if (tr.toolName === "setHeaderField") {
+          const field = tr.args.field as string
+          const value = tr.args.value as string
+          setQuoteState((prev) => ({
+            ...prev,
+            header: { ...prev.header, [field]: value },
+            customerName: field === "unternehmensname" ? value : prev.customerName,
+            title: field === "angebotstitel" ? value : prev.title,
+            updatedAt: new Date().toISOString(),
+          }))
         }
 
-        if (toolName === "addLicensePosition") {
+        if (tr.toolName === "addLicensePosition") {
           const pos = result.position as Record<string, unknown>
           setQuoteState((prev) => {
-            const product = pos.product as string
-            if (prev.licenses.some((l) => l.product === product && l.category === (pos.category as string))) return prev
+            if (prev.licenses.some((l) => l.product === pos.product && l.category === pos.category)) return prev
             return {
               ...prev,
               licenses: [
@@ -101,7 +64,7 @@ export function ChatInterface() {
                 {
                   id: `lic_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
                   category: pos.category as string,
-                  product: product,
+                  product: pos.product as string,
                   quantity: pos.quantity as number,
                   unitPrice: pos.unitPrice as number,
                   discount: (pos.discount as number) || 0,
@@ -115,11 +78,10 @@ export function ChatInterface() {
           })
         }
 
-        if (toolName === "addServicePosition") {
+        if (tr.toolName === "addServicePosition") {
           const pos = result.position as Record<string, unknown>
           setQuoteState((prev) => {
-            const desc = pos.description as string
-            if (prev.services.some((s) => s.description === desc)) return prev
+            if (prev.services.some((s) => s.description === pos.description)) return prev
             return {
               ...prev,
               services: [
@@ -127,8 +89,8 @@ export function ChatInterface() {
                 {
                   id: `svc_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
                   category: pos.category as string,
-                  description: desc,
-                  unit: pos.unit as "LT" | "STD",
+                  description: pos.description as string,
+                  unit: (pos.unit as "LT" | "STD") || "LT",
                   quantity: pos.quantity as number,
                   rate: pos.rate as number,
                   discount: (pos.discount as number) || 0,
@@ -141,18 +103,17 @@ export function ChatInterface() {
           })
         }
 
-        if (toolName === "addSolutionPosition") {
+        if (tr.toolName === "addSolutionPosition") {
           const pos = result.position as Record<string, unknown>
           setQuoteState((prev) => {
-            const name = pos.name as string
-            if (prev.solutions.some((s) => s.name === name)) return prev
+            if (prev.solutions.some((s) => s.name === pos.name)) return prev
             return {
               ...prev,
               solutions: [
                 ...prev.solutions,
                 {
                   id: `sol_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-                  name: name,
+                  name: pos.name as string,
                   priceCategory: pos.priceCategory as 1 | 2 | 3 | 4,
                   flatRate: pos.flatRate as number,
                   additionalDl: (pos.additionalDl as number) || 0,
@@ -164,18 +125,17 @@ export function ChatInterface() {
           })
         }
 
-        if (toolName === "addCustomerServicePosition") {
+        if (tr.toolName === "addCustomerServicePosition") {
           const pos = result.position as Record<string, unknown>
           setQuoteState((prev) => {
-            const pkg = pos.package as string
-            if (prev.customerService.some((c) => c.package === pkg)) return prev
+            if (prev.customerService.some((c) => c.package === pos.package)) return prev
             return {
               ...prev,
               customerService: [
                 ...prev.customerService,
                 {
                   id: `csv_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-                  package: pkg,
+                  package: pos.package as string,
                   description: pos.description as string,
                   monthlyFee: pos.monthlyFee as number,
                   quantity: (pos.quantity as number) || 1,
@@ -186,38 +146,92 @@ export function ChatInterface() {
           })
         }
 
-        if (toolName === "setLegalTerms") {
+        if (tr.toolName === "setLegalTerms") {
           setQuoteState((prev) => ({
             ...prev,
             legalTerms: {
-              nachlassLizenzenMs: (args.nachlassLizenzenMs as number) || 0,
-              nachlassLizenzenNavax: (args.nachlassLizenzenNavax as number) || 0,
-              nachlassDl: (args.nachlassDl as number) || 0,
-              zahlungsfrist: (args.zahlungsfrist as string) || "30 Tage",
+              nachlassLizenzenMs: (tr.args.nachlassLizenzenMs as number) || 0,
+              nachlassLizenzenNavax: (tr.args.nachlassLizenzenNavax as number) || 0,
+              nachlassDl: (tr.args.nachlassDl as number) || 0,
+              zahlungsfrist: (tr.args.zahlungsfrist as string) || "30 Tage",
             },
             updatedAt: new Date().toISOString(),
           }))
         }
       }
-    }
-  }, [messages])
+    },
+    []
+  )
 
-  // Auto-scroll on new messages
-  React.useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight
-    }
-  }, [messages])
+  const sendMessage = React.useCallback(
+    async (text: string) => {
+      if (!text.trim() || isLoading) return
 
-  const handleSend = (text: string) => {
-    console.log("[v0] Sending message:", text.slice(0, 100))
-    sendMessage({ text })
-  }
+      const userMsg: ChatMessage = {
+        id: `msg_${Date.now()}_user`,
+        role: "user",
+        text: text.trim(),
+      }
+
+      const updatedMessages = [...messages, userMsg]
+      setMessages(updatedMessages)
+      setIsLoading(true)
+
+      try {
+        const res = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            messages: updatedMessages.map((m) => ({
+              role: m.role,
+              parts: [{ type: "text", text: m.text }],
+            })),
+            quoteState,
+          }),
+        })
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}))
+          throw new Error(errData.error || `HTTP ${res.status}`)
+        }
+
+        const data = await res.json()
+
+        const assistantMsg: ChatMessage = {
+          id: `msg_${Date.now()}_assistant`,
+          role: "assistant",
+          text: data.text || "Ich konnte die Eingabe nicht verarbeiten. Bitte versuche es nochmal.",
+          toolResults: data.toolResults,
+        }
+
+        setMessages((prev) => [...prev, assistantMsg])
+
+        // Process tool results to update quote state
+        if (data.toolResults?.length > 0) {
+          processToolResults(data.toolResults)
+        }
+      } catch (err) {
+        const errorMsg = err instanceof Error ? err.message : "Unbekannter Fehler"
+        toast.error(`Fehler: ${errorMsg}`)
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `msg_${Date.now()}_error`,
+            role: "assistant",
+            text: `Entschuldigung, es ist ein Fehler aufgetreten: ${errorMsg}. Bitte versuche es nochmal.`,
+          },
+        ])
+      } finally {
+        setIsLoading(false)
+      }
+    },
+    [messages, quoteState, isLoading, processToolResults]
+  )
 
   const handleFileUpload = async (file: File) => {
     const text = await file.text()
     const prefix = `[Hochgeladene Datei: ${file.name}]\n\n`
-    sendMessage({ text: prefix + text })
+    sendMessage(prefix + text)
     toast.success(`Datei "${file.name}" hochgeladen`)
   }
 
@@ -244,13 +258,16 @@ export function ChatInterface() {
       setQuoteState((prev) => ({ ...prev, status: "generated" }))
       toast.success("Excel erfolgreich generiert und heruntergeladen!")
     } catch {
-      toast.error("Fehler bei der Excel-Generierung. Bitte versuche es erneut.")
+      toast.error("Fehler bei der Excel-Generierung.")
     } finally {
       setIsGenerating(false)
     }
   }
 
-  const isStreaming = status === "streaming" || status === "submitted"
+  const handleNewQuote = () => {
+    setMessages([])
+    setQuoteState(createEmptyQuoteState())
+  }
 
   return (
     <div className="flex flex-1 gap-0 overflow-hidden">
@@ -258,12 +275,6 @@ export function ChatInterface() {
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Messages */}
         <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-6 lg:px-8">
-          {error && (
-            <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-              Fehler: {error.message}
-            </div>
-          )}
-
           {messages.length === 0 ? (
             <div className="flex h-full flex-col items-center justify-center gap-4 text-center">
               <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-secondary/10">
@@ -280,14 +291,15 @@ export function ChatInterface() {
               </div>
               <div className="flex flex-wrap justify-center gap-2 mt-2">
                 {[
-                  "Neuer Kunde moechte D365 BC mit 10 Essentials-Lizenzen...",
-                  "CRM-Projekt fuer Bauunternehmen in Wien...",
-                  "EasyStarter Paket mit Power BI Integration...",
+                  "Kunde Musterfirma GmbH moechte D365 Business Central mit 10 Essentials-Lizenzen, Cloud, Wien",
+                  "CRM-Projekt fuer Bauunternehmen in Graz, 5 Sales Enterprise Lizenzen plus Schulung",
+                  "EasyStarter Paket mit Power BI Workshop fuer Firma Alpentech in Linz",
                 ].map((example) => (
                   <button
                     key={example}
-                    onClick={() => handleSend(example)}
-                    className="rounded-lg border border-border bg-muted/50 px-3 py-2 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground text-left"
+                    onClick={() => sendMessage(example)}
+                    disabled={isLoading}
+                    className="rounded-lg border border-border bg-muted/50 px-3 py-2 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground text-left disabled:opacity-50"
                   >
                     {example}
                   </button>
@@ -296,44 +308,30 @@ export function ChatInterface() {
             </div>
           ) : (
             <div className="flex flex-col gap-4">
-              {messages.map((message) => {
-                const text = getUIMessageText(message)
-                const hasToolParts = message.parts?.some((p) => p.type === "tool-invocation")
-                if (!text && !hasToolParts) return null
-                return <MessageBubble key={message.id} message={message} />
-              })}
-              {isStreaming &&
-                messages.length > 0 &&
-                (() => {
-                  const last = messages[messages.length - 1]
-                  const lastText = getUIMessageText(last)
-                  const lastHasTools = last.parts?.some((p) => p.type === "tool-invocation")
-                  // Show typing indicator only if the last message is from user or assistant has no content yet
-                  if (last.role === "user" || (!lastText && !lastHasTools)) {
-                    return (
-                      <div className="flex gap-3">
-                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-secondary text-secondary-foreground">
-                          <Sparkles className="h-4 w-4" />
-                        </div>
-                        <div className="rounded-xl bg-muted px-4 py-3">
-                          <div className="flex gap-1">
-                            <span className="h-2 w-2 animate-bounce rounded-full bg-muted-foreground/40 [animation-delay:0ms]" />
-                            <span className="h-2 w-2 animate-bounce rounded-full bg-muted-foreground/40 [animation-delay:150ms]" />
-                            <span className="h-2 w-2 animate-bounce rounded-full bg-muted-foreground/40 [animation-delay:300ms]" />
-                          </div>
-                        </div>
-                      </div>
-                    )
-                  }
-                  return null
-                })()}
+              {messages.map((message) => (
+                <MessageBubble key={message.id} message={message} />
+              ))}
+              {isLoading && (
+                <div className="flex gap-3">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-secondary text-secondary-foreground">
+                    <Sparkles className="h-4 w-4" />
+                  </div>
+                  <div className="rounded-xl bg-muted px-4 py-3">
+                    <div className="flex gap-1">
+                      <span className="h-2 w-2 animate-bounce rounded-full bg-muted-foreground/40 [animation-delay:0ms]" />
+                      <span className="h-2 w-2 animate-bounce rounded-full bg-muted-foreground/40 [animation-delay:150ms]" />
+                      <span className="h-2 w-2 animate-bounce rounded-full bg-muted-foreground/40 [animation-delay:300ms]" />
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
 
         {/* Input */}
         <div className="border-t border-border bg-background p-4 lg:px-8">
-          <ChatInput onSend={handleSend} onFileUpload={handleFileUpload} disabled={isStreaming} />
+          <ChatInput onSend={sendMessage} onFileUpload={handleFileUpload} disabled={isLoading} />
         </div>
       </div>
 
@@ -343,6 +341,7 @@ export function ChatInterface() {
           quoteState={quoteState}
           onGenerateExcel={handleGenerateExcel}
           isGenerating={isGenerating}
+          onNewQuote={handleNewQuote}
         />
       </div>
     </div>
