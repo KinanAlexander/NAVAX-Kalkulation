@@ -62,16 +62,12 @@ export function AppShell({ children }: AppShellProps) {
         {/* Logo */}
         <div
           className={cn(
-            "flex h-14 items-center border-b border-sidebar-border",
-            collapsed ? "justify-center px-2" : "justify-between px-4"
+            "flex h-14 items-center border-b border-sidebar-border overflow-visible",
+            collapsed ? "justify-center px-1" : "justify-between px-4"
           )}
         >
-          <Link href="/" className="shrink-0">
-            {collapsed ? (
-              <NavaxLogo variant="brand" width={32} />
-            ) : (
-              <NavaxLogo variant="brand" width={96} />
-            )}
+          <Link href="/" className="shrink-0 flex items-center overflow-visible">
+            <NavaxLogo variant="brand" width={collapsed ? 48 : 100} />
           </Link>
           {!collapsed && (
             <Button
