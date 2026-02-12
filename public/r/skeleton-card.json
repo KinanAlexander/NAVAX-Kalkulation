@@ -1,0 +1,18 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "skeleton-card",
+  "type": "registry:ui",
+  "title": "Skeleton Card",
+  "description": "Loading skeleton card with configurable lines, avatar, and image slots.",
+  "dependencies": [],
+  "registryDependencies": [
+    "skeleton"
+  ],
+  "files": [
+    {
+      "path": "components/ds/skeleton-card.tsx",
+      "type": "registry:ui",
+      "content": "import * as React from \"react\"\nimport { cn } from \"@/lib/utils\"\nimport { Skeleton } from \"@/components/ui/skeleton\"\n\ninterface SkeletonCardProps extends React.HTMLAttributes<HTMLDivElement> {\n  lines?: number\n  showAvatar?: boolean\n  showImage?: boolean\n}\n\nexport function SkeletonCard({\n  className,\n  lines = 3,\n  showAvatar = false,\n  showImage = false,\n  ...props\n}: SkeletonCardProps) {\n  return (\n    <div\n      className={cn(\n        \"rounded-lg border border-border bg-card p-6 flex flex-col gap-4\",\n        className\n      )}\n      {...props}\n    >\n      {showImage && <Skeleton className=\"h-40 w-full rounded-md\" />}\n      <div className=\"flex items-center gap-3\">\n        {showAvatar && <Skeleton className=\"size-10 rounded-full shrink-0\" />}\n        <div className=\"flex-1 flex flex-col gap-2\">\n          <Skeleton className=\"h-4 w-3/4\" />\n          <Skeleton className=\"h-3 w-1/2\" />\n        </div>\n      </div>\n      <div className=\"flex flex-col gap-2\">\n        {Array.from({ length: lines }).map((_, i) => (\n          <Skeleton\n            key={i}\n            className={cn(\"h-3\", i === lines - 1 ? \"w-2/3\" : \"w-full\")}\n          />\n        ))}\n      </div>\n    </div>\n  )\n}\n"
+    }
+  ]
+}

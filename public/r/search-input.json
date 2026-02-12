@@ -1,0 +1,18 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "search-input",
+  "type": "registry:ui",
+  "title": "Search Input",
+  "description": "Search input with icon prefix and clearable value.",
+  "dependencies": [
+    "lucide-react"
+  ],
+  "registryDependencies": [],
+  "files": [
+    {
+      "path": "components/ds/search-input.tsx",
+      "type": "registry:ui",
+      "content": "\"use client\"\n\nimport * as React from \"react\"\nimport { cn } from \"@/lib/utils\"\nimport { Search, X } from \"lucide-react\"\n\ninterface SearchInputProps\n  extends Omit<React.InputHTMLAttributes<HTMLInputElement>, \"type\"> {\n  onClear?: () => void\n}\n\nexport function SearchInput({\n  className,\n  value,\n  onClear,\n  ...props\n}: SearchInputProps) {\n  const hasValue = value !== undefined && value !== \"\"\n\n  return (\n    <div className={cn(\"relative\", className)}>\n      <Search className=\"absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none\" />\n      <input\n        type=\"search\"\n        className={cn(\n          \"flex h-10 w-full rounded-md border border-input bg-background py-2 pl-9 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50\",\n          hasValue && onClear ? \"pr-9\" : \"pr-3\"\n        )}\n        value={value}\n        {...props}\n      />\n      {hasValue && onClear && (\n        <button\n          type=\"button\"\n          onClick={onClear}\n          className=\"absolute right-3 top-1/2 -translate-y-1/2 rounded-sm p-0.5 text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring\"\n          aria-label=\"Clear search\"\n        >\n          <X className=\"size-3.5\" />\n        </button>\n      )}\n    </div>\n  )\n}\n"
+    }
+  ]
+}

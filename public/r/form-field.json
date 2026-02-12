@@ -1,0 +1,18 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "form-field",
+  "type": "registry:ui",
+  "title": "Form Field",
+  "description": "Form field wrapper with label, description, error, and required indicator.",
+  "dependencies": [],
+  "registryDependencies": [
+    "label"
+  ],
+  "files": [
+    {
+      "path": "components/ds/form-field.tsx",
+      "type": "registry:ui",
+      "content": "import * as React from \"react\"\nimport { cn } from \"@/lib/utils\"\nimport { Label } from \"@/components/ui/label\"\n\ninterface FormFieldProps extends React.HTMLAttributes<HTMLDivElement> {\n  label: string\n  htmlFor: string\n  description?: string\n  error?: string\n  required?: boolean\n}\n\nexport function FormField({\n  className,\n  label,\n  htmlFor,\n  description,\n  error,\n  required,\n  children,\n  ...props\n}: FormFieldProps) {\n  return (\n    <div className={cn(\"flex flex-col gap-2\", className)} {...props}>\n      <Label htmlFor={htmlFor} className=\"text-sm font-medium text-foreground\">\n        {label}\n        {required && (\n          <span className=\"ml-0.5 text-destructive\" aria-hidden=\"true\">\n            *\n          </span>\n        )}\n      </Label>\n      {children}\n      {description && !error && (\n        <p className=\"text-xs text-muted-foreground\">{description}</p>\n      )}\n      {error && (\n        <p className=\"text-xs text-destructive\" role=\"alert\">\n          {error}\n        </p>\n      )}\n    </div>\n  )\n}\n"
+    }
+  ]
+}

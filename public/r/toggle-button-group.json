@@ -1,0 +1,16 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "toggle-button-group",
+  "type": "registry:ui",
+  "title": "Toggle Button Group",
+  "description": "Segmented control / toggle group with radio-like behavior.",
+  "dependencies": [],
+  "registryDependencies": [],
+  "files": [
+    {
+      "path": "components/ds/toggle-button-group.tsx",
+      "type": "registry:ui",
+      "content": "\"use client\"\n\nimport * as React from \"react\"\nimport { cn } from \"@/lib/utils\"\n\ninterface ToggleButtonGroupItem {\n  label: string\n  value: string\n  icon?: React.ReactNode\n}\n\ninterface ToggleButtonGroupProps extends React.HTMLAttributes<HTMLDivElement> {\n  items: ToggleButtonGroupItem[]\n  value: string\n  onValueChange: (value: string) => void\n  size?: \"sm\" | \"md\"\n}\n\nexport function ToggleButtonGroup({\n  className,\n  items,\n  value,\n  onValueChange,\n  size = \"md\",\n  ...props\n}: ToggleButtonGroupProps) {\n  return (\n    <div\n      className={cn(\n        \"inline-flex items-center rounded-lg border border-border bg-muted p-1\",\n        className\n      )}\n      role=\"radiogroup\"\n      {...props}\n    >\n      {items.map((item) => (\n        <button\n          key={item.value}\n          type=\"button\"\n          role=\"radio\"\n          aria-checked={value === item.value}\n          className={cn(\n            \"inline-flex items-center justify-center gap-1.5 rounded-md font-medium transition-all\",\n            size === \"sm\" && \"px-2.5 py-1 text-xs\",\n            size === \"md\" && \"px-3 py-1.5 text-sm\",\n            value === item.value\n              ? \"bg-background text-foreground shadow-sm\"\n              : \"text-muted-foreground hover:text-foreground\"\n          )}\n          onClick={() => onValueChange(item.value)}\n        >\n          {item.icon && (\n            <span className=\"[&_svg]:size-3.5\">{item.icon}</span>\n          )}\n          {item.label}\n        </button>\n      ))}\n    </div>\n  )\n}\n"
+    }
+  ]
+}

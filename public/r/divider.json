@@ -1,0 +1,16 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "divider",
+  "type": "registry:ui",
+  "title": "Divider",
+  "description": "Horizontal, vertical, or labeled divider component.",
+  "dependencies": [],
+  "registryDependencies": [],
+  "files": [
+    {
+      "path": "components/ds/divider.tsx",
+      "type": "registry:ui",
+      "content": "import * as React from \"react\"\nimport { cn } from \"@/lib/utils\"\n\ninterface DividerProps extends React.HTMLAttributes<HTMLDivElement> {\n  label?: string\n  orientation?: \"horizontal\" | \"vertical\"\n}\n\nexport function Divider({\n  className,\n  label,\n  orientation = \"horizontal\",\n  ...props\n}: DividerProps) {\n  if (orientation === \"vertical\") {\n    return (\n      <div\n        role=\"separator\"\n        aria-orientation=\"vertical\"\n        className={cn(\"w-px self-stretch bg-border\", className)}\n        {...props}\n      />\n    )\n  }\n\n  if (label) {\n    return (\n      <div\n        role=\"separator\"\n        className={cn(\"flex items-center gap-4\", className)}\n        {...props}\n      >\n        <div className=\"h-px flex-1 bg-border\" />\n        <span className=\"text-xs font-medium text-muted-foreground uppercase tracking-wider\">\n          {label}\n        </span>\n        <div className=\"h-px flex-1 bg-border\" />\n      </div>\n    )\n  }\n\n  return (\n    <div\n      role=\"separator\"\n      className={cn(\"h-px w-full bg-border\", className)}\n      {...props}\n    />\n  )\n}\n"
+    }
+  ]
+}

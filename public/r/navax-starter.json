@@ -1,0 +1,33 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "navax-starter",
+  "type": "registry:block",
+  "title": "NAVAX Starter Template",
+  "description": "A minimal Next.js app shell with the NAVAX header, footer, brand tokens, and fonts pre-configured. Use as a starting point and add more components from the registry as needed.",
+  "dependencies": [
+    "lucide-react"
+  ],
+  "registryDependencies": [
+    "button",
+    "https://v0-navax-design-system-guide.vercel.app/r/app-header.json",
+    "https://v0-navax-design-system-guide.vercel.app/r/app-footer.json",
+    "https://v0-navax-design-system-guide.vercel.app/r/navax-logo.json"
+  ],
+  "files": [
+    {
+      "path": "app/globals.css",
+      "type": "registry:style",
+      "content": "@tailwind base;\n@tailwind components;\n@tailwind utilities;\n\n@layer utilities {\n  .text-balance {\n    text-wrap: balance;\n  }\n}\n\n@layer base {\n  :root {\n    /* NAVAX Brand: Magenta #79217a + Teal #006F6E */\n    --background: 0 0% 100%;\n    --foreground: 210 11% 15%;\n    --card: 0 0% 100%;\n    --card-foreground: 210 11% 15%;\n    --popover: 0 0% 100%;\n    --popover-foreground: 210 11% 15%;\n\n    /* Primary: NAVAX magenta */\n    --primary: 299 57% 30%;\n    --primary-foreground: 0 0% 100%;\n\n    /* Secondary: NAVAX teal */\n    --secondary: 180 100% 22%;\n    --secondary-foreground: 0 0% 100%;\n\n    --muted: 210 14% 96%;\n    --muted-foreground: 210 8% 46%;\n\n    --accent: 180 30% 94%;\n    --accent-foreground: 180 100% 18%;\n\n    --destructive: 0 84% 60%;\n    --destructive-foreground: 0 0% 100%;\n\n    --success: 160 65% 38%;\n    --success-foreground: 0 0% 100%;\n\n    --warning: 38 92% 50%;\n    --warning-foreground: 0 0% 100%;\n\n    --info: 212 63% 43%;\n    --info-foreground: 0 0% 100%;\n\n    --border: 210 14% 89%;\n    --input: 210 14% 89%;\n    --ring: 299 57% 30%;\n\n    --chart-1: 299 57% 30%;\n    --chart-2: 180 100% 22%;\n    --chart-3: 212 63% 43%;\n    --chart-4: 38 92% 50%;\n    --chart-5: 160 65% 38%;\n\n    --radius: 0.5rem;\n\n    --sidebar-background: 210 20% 98%;\n    --sidebar-foreground: 210 11% 25%;\n    --sidebar-primary: 299 57% 30%;\n    --sidebar-primary-foreground: 0 0% 100%;\n    --sidebar-accent: 180 30% 94%;\n    --sidebar-accent-foreground: 180 100% 18%;\n    --sidebar-border: 210 14% 89%;\n    --sidebar-ring: 299 57% 30%;\n  }\n\n  .dark {\n    --background: 210 15% 7%;\n    --foreground: 210 14% 95%;\n    --card: 210 15% 9%;\n    --card-foreground: 210 14% 95%;\n    --popover: 210 15% 9%;\n    --popover-foreground: 210 14% 95%;\n\n    --primary: 299 50% 58%;\n    --primary-foreground: 0 0% 100%;\n\n    --secondary: 180 70% 30%;\n    --secondary-foreground: 0 0% 100%;\n\n    --muted: 210 12% 14%;\n    --muted-foreground: 210 8% 60%;\n\n    --accent: 180 25% 16%;\n    --accent-foreground: 180 50% 70%;\n\n    --destructive: 0 63% 31%;\n    --destructive-foreground: 0 0% 100%;\n\n    --success: 160 55% 32%;\n    --success-foreground: 0 0% 100%;\n\n    --warning: 38 80% 45%;\n    --warning-foreground: 0 0% 100%;\n\n    --info: 212 55% 50%;\n    --info-foreground: 0 0% 100%;\n\n    --border: 210 12% 18%;\n    --input: 210 12% 18%;\n    --ring: 299 50% 58%;\n\n    --chart-1: 299 50% 58%;\n    --chart-2: 180 70% 35%;\n    --chart-3: 212 55% 55%;\n    --chart-4: 38 80% 55%;\n    --chart-5: 160 55% 45%;\n\n    --sidebar-background: 210 15% 7%;\n    --sidebar-foreground: 210 14% 95%;\n    --sidebar-primary: 299 50% 58%;\n    --sidebar-primary-foreground: 0 0% 100%;\n    --sidebar-accent: 180 25% 16%;\n    --sidebar-accent-foreground: 180 50% 70%;\n    --sidebar-border: 210 12% 18%;\n    --sidebar-ring: 299 50% 58%;\n  }\n}\n\n@layer base {\n  * {\n    @apply border-border;\n  }\n  body {\n    @apply bg-background text-foreground;\n  }\n}\n"
+    },
+    {
+      "path": "app/layout.tsx",
+      "type": "registry:page",
+      "content": "import React from \"react\"\nimport type { Metadata } from \"next\"\nimport { Inter, DM_Sans, JetBrains_Mono } from \"next/font/google\"\n\nimport \"./globals.css\"\n\nconst _inter = Inter({ subsets: [\"latin\"], variable: \"--font-inter\" })\nconst _heading = DM_Sans({ subsets: [\"latin\"], weight: [\"400\", \"500\", \"600\", \"700\"], variable: \"--font-heading\" })\nconst _mono = JetBrains_Mono({ subsets: [\"latin\"], variable: \"--font-mono\" })\n\nexport const metadata: Metadata = {\n  title: \"NAVAX App\",\n  description: \"Built with the NAVAX design system\",\n}\n\nexport default function RootLayout({\n  children,\n}: Readonly<{\n  children: React.ReactNode\n}>) {\n  return (\n    <html lang=\"en\">\n      <body className={`${_inter.variable} ${_heading.variable} ${_mono.variable} font-sans antialiased`}>\n        {children}\n      </body>\n    </html>\n  )\n}\n"
+    },
+    {
+      "path": "app/page.tsx",
+      "type": "registry:page",
+      "content": "import { AppHeader } from \"@/components/ds/app-header\"\nimport { AppFooter } from \"@/components/ds/app-footer\"\n\nexport default function Home() {\n  return (\n    <div className=\"flex min-h-screen flex-col\">\n      <AppHeader />\n\n      <main className=\"flex flex-1 flex-col items-center justify-center gap-6 px-4 py-20\">\n        <h1 className=\"font-heading text-4xl font-bold tracking-tight text-balance text-center md:text-5xl\">\n          Welcome to NAVAX\n        </h1>\n        <p className=\"max-w-md text-center text-muted-foreground text-lg leading-relaxed\">\n          This starter includes the header, footer, and brand tokens.\n          Add more components from the registry as you build.\n        </p>\n        <pre className=\"rounded-md bg-muted px-4 py-2 text-sm font-mono text-foreground\">\n          npx shadcn@latest add https://v0-navax-design-system-guide.vercel.app/r/stat-card.json\n        </pre>\n      </main>\n\n      <AppFooter />\n    </div>\n  )\n}\n"
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "kbd",
+  "type": "registry:ui",
+  "title": "Kbd",
+  "description": "Keyboard shortcut hint with styled key caps and separator.",
+  "dependencies": [],
+  "registryDependencies": [],
+  "files": [
+    {
+      "path": "components/ds/kbd.tsx",
+      "type": "registry:ui",
+      "content": "import * as React from \"react\"\nimport { cn } from \"@/lib/utils\"\n\ninterface KbdProps extends React.HTMLAttributes<HTMLElement> {\n  keys: string[]\n}\n\nexport function Kbd({ className, keys, ...props }: KbdProps) {\n  return (\n    <span className={cn(\"inline-flex items-center gap-0.5\", className)} {...props}>\n      {keys.map((key, i) => (\n        <React.Fragment key={i}>\n          {i > 0 && <span className=\"text-xs text-muted-foreground\">+</span>}\n          <kbd\n            className=\"inline-flex h-5 min-w-[20px] items-center justify-center rounded border border-border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground\"\n          >\n            {key}\n          </kbd>\n        </React.Fragment>\n      ))}\n    </span>\n  )\n}\n"
+    }
+  ]
+}

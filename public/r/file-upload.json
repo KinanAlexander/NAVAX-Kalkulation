@@ -1,0 +1,18 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "file-upload",
+  "type": "registry:ui",
+  "title": "File Upload",
+  "description": "Drag and drop file upload zone with click fallback.",
+  "dependencies": [
+    "lucide-react"
+  ],
+  "registryDependencies": [],
+  "files": [
+    {
+      "path": "components/ds/file-upload.tsx",
+      "type": "registry:ui",
+      "content": "\"use client\"\n\nimport * as React from \"react\"\nimport { cn } from \"@/lib/utils\"\nimport { Upload } from \"lucide-react\"\n\ninterface FileUploadProps extends React.HTMLAttributes<HTMLDivElement> {\n  accept?: string\n  multiple?: boolean\n  onFilesSelected?: (files: FileList) => void\n  label?: string\n  description?: string\n}\n\nexport function FileUpload({\n  className,\n  accept,\n  multiple,\n  onFilesSelected,\n  label = \"Upload a file\",\n  description = \"Drag and drop or click to browse\",\n  ...props\n}: FileUploadProps) {\n  const inputRef = React.useRef<HTMLInputElement>(null)\n  const [isDragging, setIsDragging] = React.useState(false)\n\n  const handleDragOver = (e: React.DragEvent) => {\n    e.preventDefault()\n    setIsDragging(true)\n  }\n\n  const handleDragLeave = () => setIsDragging(false)\n\n  const handleDrop = (e: React.DragEvent) => {\n    e.preventDefault()\n    setIsDragging(false)\n    if (e.dataTransfer.files.length > 0) {\n      onFilesSelected?.(e.dataTransfer.files)\n    }\n  }\n\n  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {\n    if (e.target.files && e.target.files.length > 0) {\n      onFilesSelected?.(e.target.files)\n    }\n  }\n\n  return (\n    <div\n      className={cn(\n        \"flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed px-6 py-10 text-center transition-colors\",\n        isDragging\n          ? \"border-primary bg-primary/5\"\n          : \"border-border hover:border-primary/40 hover:bg-muted/50\",\n        className\n      )}\n      onDragOver={handleDragOver}\n      onDragLeave={handleDragLeave}\n      onDrop={handleDrop}\n      onClick={() => inputRef.current?.click()}\n      role=\"button\"\n      tabIndex={0}\n      onKeyDown={(e) => {\n        if (e.key === \"Enter\" || e.key === \" \") {\n          e.preventDefault()\n          inputRef.current?.click()\n        }\n      }}\n      {...props}\n    >\n      <Upload className=\"mb-3 size-8 text-muted-foreground\" />\n      <p className=\"text-sm font-medium text-foreground\">{label}</p>\n      <p className=\"mt-1 text-xs text-muted-foreground\">{description}</p>\n      <input\n        ref={inputRef}\n        type=\"file\"\n        accept={accept}\n        multiple={multiple}\n        onChange={handleChange}\n        className=\"sr-only\"\n        aria-label={label}\n      />\n    </div>\n  )\n}\n"
+    }
+  ]
+}

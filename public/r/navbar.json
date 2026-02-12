@@ -1,0 +1,16 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "navbar",
+  "type": "registry:ui",
+  "title": "Navbar",
+  "description": "Sticky top navigation bar with logo, links, and actions slots.",
+  "dependencies": [],
+  "registryDependencies": [],
+  "files": [
+    {
+      "path": "components/ds/navbar.tsx",
+      "type": "registry:ui",
+      "content": "import * as React from \"react\"\nimport { cn } from \"@/lib/utils\"\n\ninterface NavbarProps extends React.HTMLAttributes<HTMLElement> {\n  logo?: React.ReactNode\n  actions?: React.ReactNode\n}\n\nexport function Navbar({\n  className,\n  logo,\n  actions,\n  children,\n  ...props\n}: NavbarProps) {\n  return (\n    <header\n      className={cn(\n        \"sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60\",\n        className\n      )}\n      {...props}\n    >\n      <div className=\"mx-auto flex h-14 max-w-6xl items-center px-4 md:px-6\">\n        {logo && <div className=\"mr-6 shrink-0\">{logo}</div>}\n        <nav className=\"flex flex-1 items-center gap-1\">{children}</nav>\n        {actions && <div className=\"ml-auto flex items-center gap-2\">{actions}</div>}\n      </div>\n    </header>\n  )\n}\n\ninterface NavbarLinkProps extends React.AnchorHTMLAttributes<HTMLAnchorElement> {\n  active?: boolean\n}\n\nexport function NavbarLink({\n  className,\n  active,\n  children,\n  ...props\n}: NavbarLinkProps) {\n  return (\n    <a\n      className={cn(\n        \"inline-flex items-center rounded-md px-3 py-1.5 text-sm font-medium transition-colors\",\n        active\n          ? \"bg-accent text-accent-foreground\"\n          : \"text-muted-foreground hover:bg-accent hover:text-accent-foreground\",\n        className\n      )}\n      aria-current={active ? \"page\" : undefined}\n      {...props}\n    >\n      {children}\n    </a>\n  )\n}\n"
+    }
+  ]
+}

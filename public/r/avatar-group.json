@@ -1,0 +1,18 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "avatar-group",
+  "type": "registry:ui",
+  "title": "Avatar Group",
+  "description": "Stacked avatar group with overflow indicator.",
+  "dependencies": [],
+  "registryDependencies": [
+    "avatar"
+  ],
+  "files": [
+    {
+      "path": "components/ds/avatar-group.tsx",
+      "type": "registry:ui",
+      "content": "import * as React from \"react\"\nimport { cn } from \"@/lib/utils\"\nimport {\n  Avatar,\n  AvatarFallback,\n  AvatarImage,\n} from \"@/components/ui/avatar\"\n\ninterface AvatarItem {\n  src?: string\n  fallback: string\n  alt?: string\n}\n\ninterface AvatarGroupProps extends React.HTMLAttributes<HTMLDivElement> {\n  items: AvatarItem[]\n  max?: number\n  size?: \"sm\" | \"md\" | \"lg\"\n}\n\nconst sizeClasses = {\n  sm: \"size-7 text-xs\",\n  md: \"size-9 text-sm\",\n  lg: \"size-11 text-base\",\n}\n\nexport function AvatarGroup({\n  className,\n  items,\n  max = 5,\n  size = \"md\",\n  ...props\n}: AvatarGroupProps) {\n  const visible = items.slice(0, max)\n  const remaining = items.length - max\n\n  return (\n    <div\n      className={cn(\"flex items-center -space-x-2\", className)}\n      {...props}\n    >\n      {visible.map((item, i) => (\n        <Avatar\n          key={i}\n          className={cn(\n            sizeClasses[size],\n            \"border-2 border-background ring-0\"\n          )}\n        >\n          {item.src && <AvatarImage src={item.src || \"/placeholder.svg\"} alt={item.alt || item.fallback} />}\n          <AvatarFallback className=\"text-[inherit] bg-primary/10 text-primary font-medium\">\n            {item.fallback}\n          </AvatarFallback>\n        </Avatar>\n      ))}\n      {remaining > 0 && (\n        <div\n          className={cn(\n            sizeClasses[size],\n            \"inline-flex items-center justify-center rounded-full border-2 border-background bg-muted font-medium text-muted-foreground\"\n          )}\n        >\n          +{remaining}\n        </div>\n      )}\n    </div>\n  )\n}\n"
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "heading",
+  "type": "registry:ui",
+  "title": "Heading",
+  "description": "Semantic heading component with 4 levels and serif/sans variants.",
+  "dependencies": [
+    "class-variance-authority"
+  ],
+  "registryDependencies": [],
+  "files": [
+    {
+      "path": "components/ds/heading.tsx",
+      "type": "registry:ui",
+      "content": "import * as React from \"react\"\nimport { cva, type VariantProps } from \"class-variance-authority\"\nimport { cn } from \"@/lib/utils\"\nimport { JSX } from \"react\"\n\nconst headingVariants = cva(\"text-balance tracking-tight\", {\n  variants: {\n    level: {\n      1: \"text-4xl font-semibold font-heading\",\n      2: \"text-2xl font-semibold font-heading\",\n      3: \"text-lg font-semibold font-heading\",\n      4: \"text-base font-semibold font-heading\",\n    },\n  },\n  defaultVariants: {\n    level: 1,\n  },\n})\n\ntype HeadingLevel = 1 | 2 | 3 | 4\n\ninterface HeadingProps\n  extends React.HTMLAttributes<HTMLHeadingElement>,\n    VariantProps<typeof headingVariants> {\n  as?: `h${HeadingLevel}`\n}\n\nexport function Heading({\n  className,\n  level = 1,\n  as,\n  ...props\n}: HeadingProps) {\n  const Tag = as || (`h${level}` as keyof JSX.IntrinsicElements)\n\n  return (\n    <Tag\n      className={cn(headingVariants({ level, className }))}\n      {...props}\n    />\n  )\n}\n"
+    }
+  ]
+}

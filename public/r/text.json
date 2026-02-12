@@ -1,0 +1,18 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "text",
+  "type": "registry:ui",
+  "title": "Text",
+  "description": "Typography component with body, small, caption, code, and lead variants.",
+  "dependencies": [
+    "class-variance-authority"
+  ],
+  "registryDependencies": [],
+  "files": [
+    {
+      "path": "components/ds/text.tsx",
+      "type": "registry:ui",
+      "content": "import * as React from \"react\"\nimport { cva, type VariantProps } from \"class-variance-authority\"\nimport { cn } from \"@/lib/utils\"\n\nconst textVariants = cva(\"font-sans\", {\n  variants: {\n    variant: {\n      body: \"text-base leading-relaxed text-foreground\",\n      small: \"text-sm text-muted-foreground\",\n      caption: \"text-xs text-muted-foreground\",\n      code: \"text-sm font-mono bg-muted px-1.5 py-0.5 rounded-md\",\n      lead: \"text-lg leading-relaxed text-muted-foreground\",\n    },\n  },\n  defaultVariants: {\n    variant: \"body\",\n  },\n})\n\ninterface TextProps\n  extends React.HTMLAttributes<HTMLParagraphElement>,\n    VariantProps<typeof textVariants> {\n  as?: \"p\" | \"span\" | \"div\" | \"label\"\n}\n\nexport function Text({\n  className,\n  variant,\n  as: Tag = \"p\",\n  ...props\n}: TextProps) {\n  return (\n    <Tag className={cn(textVariants({ variant, className }))} {...props} />\n  )\n}\n"
+    }
+  ]
+}

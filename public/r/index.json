@@ -1,0 +1,328 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry.json",
+  "name": "navax-ds",
+  "homepage": "",
+  "items": [
+    {
+      "name": "alert-banner",
+      "type": "registry:ui",
+      "title": "Alert Banner",
+      "description": "Dismissible alert banner with icon, title, and semantic variants.",
+      "dependencies": [
+        "class-variance-authority",
+        "lucide-react"
+      ],
+      "registryDependencies": []
+    },
+    {
+      "name": "app-footer",
+      "type": "registry:ui",
+      "title": "App Footer",
+      "description": "Dark footer with brand logo, multi-column links, and bottom bar with legal links.",
+      "dependencies": [],
+      "registryDependencies": []
+    },
+    {
+      "name": "app-header",
+      "type": "registry:ui",
+      "title": "App Header",
+      "description": "Full responsive app header with dropdown navigation, top bar, search, CTA, and mobile menu.",
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "button"
+      ]
+    },
+    {
+      "name": "app-sidebar",
+      "type": "registry:ui",
+      "title": "App Sidebar",
+      "description": "Collapsible app sidebar with nested navigation, badges, user section, and sign-out.",
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "button"
+      ]
+    },
+    {
+      "name": "avatar-group",
+      "type": "registry:ui",
+      "title": "Avatar Group",
+      "description": "Stacked avatar group with overflow indicator.",
+      "dependencies": [],
+      "registryDependencies": [
+        "avatar"
+      ]
+    },
+    {
+      "name": "breadcrumbs",
+      "type": "registry:ui",
+      "title": "Breadcrumbs",
+      "description": "Accessible breadcrumb navigation with chevron separators.",
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": []
+    },
+    {
+      "name": "command-menu",
+      "type": "registry:ui",
+      "title": "Command Menu",
+      "description": "Spotlight-style command palette with search, groups, and keyboard shortcuts.",
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": []
+    },
+    {
+      "name": "data-table",
+      "type": "registry:ui",
+      "title": "Data Table",
+      "description": "Generic sortable data table with typed columns, hover states, and empty state.",
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": []
+    },
+    {
+      "name": "divider",
+      "type": "registry:ui",
+      "title": "Divider",
+      "description": "Horizontal, vertical, or labeled divider component.",
+      "dependencies": [],
+      "registryDependencies": []
+    },
+    {
+      "name": "empty-state",
+      "type": "registry:ui",
+      "title": "Empty State",
+      "description": "Empty state placeholder with icon, title, description, and action.",
+      "dependencies": [],
+      "registryDependencies": []
+    },
+    {
+      "name": "feature-card",
+      "type": "registry:ui",
+      "title": "Feature Card",
+      "description": "Feature highlight card with icon, title, description, and optional link.",
+      "dependencies": [],
+      "registryDependencies": []
+    },
+    {
+      "name": "file-upload",
+      "type": "registry:ui",
+      "title": "File Upload",
+      "description": "Drag and drop file upload zone with click fallback.",
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": []
+    },
+    {
+      "name": "form-field",
+      "type": "registry:ui",
+      "title": "Form Field",
+      "description": "Form field wrapper with label, description, error, and required indicator.",
+      "dependencies": [],
+      "registryDependencies": [
+        "label"
+      ]
+    },
+    {
+      "name": "heading",
+      "type": "registry:ui",
+      "title": "Heading",
+      "description": "Semantic heading component with 4 levels and serif/sans variants.",
+      "dependencies": [
+        "class-variance-authority"
+      ],
+      "registryDependencies": []
+    },
+    {
+      "name": "icon-button",
+      "type": "registry:ui",
+      "title": "Icon Button",
+      "description": "Accessible icon-only button with required aria label.",
+      "dependencies": [
+        "class-variance-authority"
+      ],
+      "registryDependencies": []
+    },
+    {
+      "name": "kbd",
+      "type": "registry:ui",
+      "title": "Kbd",
+      "description": "Keyboard shortcut hint with styled key caps and separator.",
+      "dependencies": [],
+      "registryDependencies": []
+    },
+    {
+      "name": "navax-logo",
+      "type": "registry:ui",
+      "title": "Navax Logo",
+      "description": "NAVAX SVG logo component with dark, light, and brand color variants.",
+      "dependencies": [],
+      "registryDependencies": []
+    },
+    {
+      "name": "navbar",
+      "type": "registry:ui",
+      "title": "Navbar",
+      "description": "Sticky top navigation bar with logo, links, and actions slots.",
+      "dependencies": [],
+      "registryDependencies": []
+    },
+    {
+      "name": "page-header",
+      "type": "registry:ui",
+      "title": "Page Header",
+      "description": "Page header with title, description, actions, and breadcrumb slots.",
+      "dependencies": [],
+      "registryDependencies": []
+    },
+    {
+      "name": "pricing-card",
+      "type": "registry:ui",
+      "title": "Pricing Card",
+      "description": "Pricing tier card with feature list, highlight badge, and CTA button.",
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "button"
+      ]
+    },
+    {
+      "name": "progress-bar",
+      "type": "registry:ui",
+      "title": "Progress Bar",
+      "description": "Accessible progress bar with color variants and optional label.",
+      "dependencies": [
+        "class-variance-authority"
+      ],
+      "registryDependencies": []
+    },
+    {
+      "name": "search-input",
+      "type": "registry:ui",
+      "title": "Search Input",
+      "description": "Search input with icon prefix and clearable value.",
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": []
+    },
+    {
+      "name": "section",
+      "type": "registry:ui",
+      "title": "Section",
+      "description": "Page section wrapper with consistent padding and optional container.",
+      "dependencies": [],
+      "registryDependencies": []
+    },
+    {
+      "name": "skeleton-card",
+      "type": "registry:ui",
+      "title": "Skeleton Card",
+      "description": "Loading skeleton card with configurable lines, avatar, and image slots.",
+      "dependencies": [],
+      "registryDependencies": [
+        "skeleton"
+      ]
+    },
+    {
+      "name": "stack",
+      "type": "registry:ui",
+      "title": "Stack",
+      "description": "Flexbox layout helper with direction, gap, align, and justify props.",
+      "dependencies": [
+        "class-variance-authority"
+      ],
+      "registryDependencies": []
+    },
+    {
+      "name": "stat-card",
+      "type": "registry:ui",
+      "title": "Stat Card",
+      "description": "Metric display card with label, value, trend, and icon.",
+      "dependencies": [
+        "class-variance-authority"
+      ],
+      "registryDependencies": []
+    },
+    {
+      "name": "status-badge",
+      "type": "registry:ui",
+      "title": "Status Badge",
+      "description": "Semantic status indicator with colored dot and variants.",
+      "dependencies": [
+        "class-variance-authority"
+      ],
+      "registryDependencies": []
+    },
+    {
+      "name": "stepper",
+      "type": "registry:ui",
+      "title": "Stepper",
+      "description": "Step progress indicator with horizontal and vertical orientations.",
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": []
+    },
+    {
+      "name": "tab-nav",
+      "type": "registry:ui",
+      "title": "Tab Nav",
+      "description": "Underline-style tab navigation with counts and active state.",
+      "dependencies": [],
+      "registryDependencies": []
+    },
+    {
+      "name": "testimonial-card",
+      "type": "registry:ui",
+      "title": "Testimonial Card",
+      "description": "Customer testimonial card with quote, avatar, star rating, and attribution.",
+      "dependencies": [],
+      "registryDependencies": []
+    },
+    {
+      "name": "text",
+      "type": "registry:ui",
+      "title": "Text",
+      "description": "Typography component with body, small, caption, code, and lead variants.",
+      "dependencies": [
+        "class-variance-authority"
+      ],
+      "registryDependencies": []
+    },
+    {
+      "name": "timeline",
+      "type": "registry:ui",
+      "title": "Timeline",
+      "description": "Vertical timeline with status indicators and icons.",
+      "dependencies": [],
+      "registryDependencies": []
+    },
+    {
+      "name": "toggle-button-group",
+      "type": "registry:ui",
+      "title": "Toggle Button Group",
+      "description": "Segmented control / toggle group with radio-like behavior.",
+      "dependencies": [],
+      "registryDependencies": []
+    },
+    {
+      "name": "user-menu",
+      "type": "registry:ui",
+      "title": "User Menu",
+      "description": "Avatar dropdown user menu with profile, settings, and sign-out actions.",
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": []
+    }
+  ]
+}

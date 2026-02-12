@@ -1,0 +1,16 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "testimonial-card",
+  "type": "registry:ui",
+  "title": "Testimonial Card",
+  "description": "Customer testimonial card with quote, avatar, star rating, and attribution.",
+  "dependencies": [],
+  "registryDependencies": [],
+  "files": [
+    {
+      "path": "components/ds/testimonial-card.tsx",
+      "type": "registry:ui",
+      "content": "import * as React from \"react\"\nimport { cn } from \"@/lib/utils\"\n\ninterface TestimonialCardProps extends React.HTMLAttributes<HTMLDivElement> {\n  quote: string\n  name: string\n  role?: string\n  company?: string\n  avatarUrl?: string\n  rating?: number\n}\n\nexport function TestimonialCard({\n  className,\n  quote,\n  name,\n  role,\n  company,\n  avatarUrl,\n  rating,\n  ...props\n}: TestimonialCardProps) {\n  const initials = name\n    .split(\" \")\n    .map((n) => n[0])\n    .join(\"\")\n    .slice(0, 2)\n    .toUpperCase()\n\n  return (\n    <div\n      className={cn(\n        \"flex flex-col rounded-xl border border-border bg-card p-6\",\n        className\n      )}\n      {...props}\n    >\n      {rating && (\n        <div className=\"mb-3 flex gap-0.5\" aria-label={`${rating} out of 5 stars`}>\n          {Array.from({ length: 5 }).map((_, i) => (\n            <svg\n              key={i}\n              className={cn(\n                \"size-4\",\n                i < rating ? \"fill-warning text-warning\" : \"fill-muted text-muted\"\n              )}\n              viewBox=\"0 0 20 20\"\n              aria-hidden=\"true\"\n            >\n              <path d=\"M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z\" />\n            </svg>\n          ))}\n        </div>\n      )}\n\n      <blockquote className=\"flex-1 text-sm leading-relaxed text-foreground\">\n        {`\"${quote}\"`}\n      </blockquote>\n\n      <div className=\"mt-5 flex items-center gap-3\">\n        {avatarUrl ? (\n          <img\n            src={avatarUrl}\n            alt={name}\n            className=\"size-10 rounded-full object-cover\"\n          />\n        ) : (\n          <span className=\"flex size-10 items-center justify-center rounded-full bg-secondary text-xs font-semibold text-secondary-foreground\">\n            {initials}\n          </span>\n        )}\n        <div>\n          <p className=\"text-sm font-medium text-foreground\">{name}</p>\n          {(role || company) && (\n            <p className=\"text-xs text-muted-foreground\">\n              {[role, company].filter(Boolean).join(\" at \")}\n            </p>\n          )}\n        </div>\n      </div>\n    </div>\n  )\n}\n"
+    }
+  ]
+}

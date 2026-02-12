@@ -1,0 +1,18 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "stat-card",
+  "type": "registry:ui",
+  "title": "Stat Card",
+  "description": "Metric display card with label, value, trend, and icon.",
+  "dependencies": [
+    "class-variance-authority"
+  ],
+  "registryDependencies": [],
+  "files": [
+    {
+      "path": "components/ds/stat-card.tsx",
+      "type": "registry:ui",
+      "content": "import * as React from \"react\"\nimport { cva, type VariantProps } from \"class-variance-authority\"\nimport { cn } from \"@/lib/utils\"\n\nconst statCardVariants = cva(\n  \"rounded-lg border border-border bg-card p-6 flex flex-col gap-2\",\n  {\n    variants: {\n      trend: {\n        up: \"\",\n        down: \"\",\n        neutral: \"\",\n      },\n    },\n    defaultVariants: {\n      trend: \"neutral\",\n    },\n  }\n)\n\ninterface StatCardProps\n  extends React.HTMLAttributes<HTMLDivElement>,\n    VariantProps<typeof statCardVariants> {\n  label: string\n  value: string | number\n  description?: string\n  icon?: React.ReactNode\n}\n\nexport function StatCard({\n  className,\n  label,\n  value,\n  description,\n  icon,\n  trend,\n  ...props\n}: StatCardProps) {\n  return (\n    <div className={cn(statCardVariants({ trend, className }))} {...props}>\n      <div className=\"flex items-center justify-between\">\n        <span className=\"text-sm font-medium text-muted-foreground\">\n          {label}\n        </span>\n        {icon && (\n          <span className=\"text-muted-foreground [&_svg]:size-4\">\n            {icon}\n          </span>\n        )}\n      </div>\n      <span className=\"text-3xl font-semibold tracking-tight text-foreground\">\n        {value}\n      </span>\n      {description && (\n        <span\n          className={cn(\n            \"text-xs\",\n            trend === \"up\" && \"text-success\",\n            trend === \"down\" && \"text-destructive\",\n            trend === \"neutral\" && \"text-muted-foreground\"\n          )}\n        >\n          {description}\n        </span>\n      )}\n    </div>\n  )\n}\n"
+    }
+  ]
+}

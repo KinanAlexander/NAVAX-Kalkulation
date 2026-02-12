@@ -1,0 +1,16 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "tab-nav",
+  "type": "registry:ui",
+  "title": "Tab Nav",
+  "description": "Underline-style tab navigation with counts and active state.",
+  "dependencies": [],
+  "registryDependencies": [],
+  "files": [
+    {
+      "path": "components/ds/tab-nav.tsx",
+      "type": "registry:ui",
+      "content": "\"use client\"\n\nimport * as React from \"react\"\nimport { cn } from \"@/lib/utils\"\n\ninterface TabNavItem {\n  label: string\n  value: string\n  count?: number\n}\n\ninterface TabNavProps extends React.HTMLAttributes<HTMLDivElement> {\n  items: TabNavItem[]\n  value: string\n  onValueChange: (value: string) => void\n}\n\nexport function TabNav({\n  className,\n  items,\n  value,\n  onValueChange,\n  ...props\n}: TabNavProps) {\n  return (\n    <div\n      className={cn(\n        \"inline-flex items-center gap-1 border-b border-border\",\n        className\n      )}\n      role=\"tablist\"\n      {...props}\n    >\n      {items.map((item) => (\n        <button\n          key={item.value}\n          type=\"button\"\n          role=\"tab\"\n          aria-selected={value === item.value}\n          className={cn(\n            \"relative inline-flex items-center gap-2 px-3 pb-2.5 pt-1 text-sm font-medium transition-colors\",\n            value === item.value\n              ? \"text-foreground\"\n              : \"text-muted-foreground hover:text-foreground\"\n          )}\n          onClick={() => onValueChange(item.value)}\n        >\n          {item.label}\n          {item.count !== undefined && (\n            <span\n              className={cn(\n                \"inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-xs\",\n                value === item.value\n                  ? \"bg-primary/10 text-primary\"\n                  : \"bg-muted text-muted-foreground\"\n              )}\n            >\n              {item.count}\n            </span>\n          )}\n          {value === item.value && (\n            <span className=\"absolute inset-x-0 -bottom-px h-0.5 bg-primary\" />\n          )}\n        </button>\n      ))}\n    </div>\n  )\n}\n"
+    }
+  ]
+}

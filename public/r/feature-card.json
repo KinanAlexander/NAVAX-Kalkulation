@@ -1,0 +1,16 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "feature-card",
+  "type": "registry:ui",
+  "title": "Feature Card",
+  "description": "Feature highlight card with icon, title, description, and optional link.",
+  "dependencies": [],
+  "registryDependencies": [],
+  "files": [
+    {
+      "path": "components/ds/feature-card.tsx",
+      "type": "registry:ui",
+      "content": "import * as React from \"react\"\nimport { cn } from \"@/lib/utils\"\n\ninterface FeatureCardProps extends React.HTMLAttributes<HTMLDivElement> {\n  icon: React.ReactNode\n  title: string\n  description: string\n  href?: string\n}\n\nexport function FeatureCard({\n  className,\n  icon,\n  title,\n  description,\n  href,\n  ...props\n}: FeatureCardProps) {\n  const Wrapper = href ? \"a\" : \"div\"\n  const linkProps = href ? { href } : {}\n\n  return (\n    <Wrapper\n      className={cn(\n        \"group flex flex-col rounded-xl border border-border bg-card p-6 transition-all\",\n        href && \"cursor-pointer hover:border-primary/40 hover:shadow-md hover:shadow-primary/5\",\n        className\n      )}\n      {...linkProps}\n      {...(props as React.HTMLAttributes<HTMLElement>)}\n    >\n      <span\n        className={cn(\n          \"mb-4 flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary [&_svg]:size-5\",\n          href && \"transition-colors group-hover:bg-primary/15\"\n        )}\n      >\n        {icon}\n      </span>\n      <h3 className=\"text-base font-semibold font-heading text-foreground\">{title}</h3>\n      <p className=\"mt-1.5 text-sm leading-relaxed text-muted-foreground\">\n        {description}\n      </p>\n    </Wrapper>\n  )\n}\n"
+    }
+  ]
+}

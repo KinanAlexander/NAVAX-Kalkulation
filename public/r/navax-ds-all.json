@@ -1,0 +1,51 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "navax-ds-all",
+  "type": "registry:ui",
+  "title": "NAVAX Design System - All Components",
+  "description": "Bundle that imports every NAVAX design system component at once.",
+  "dependencies": [],
+  "registryDependencies": [
+    "https://v0-navax-design-system-guide.vercel.app/r/alert-banner.json",
+    "https://v0-navax-design-system-guide.vercel.app/r/app-footer.json",
+    "https://v0-navax-design-system-guide.vercel.app/r/app-header.json",
+    "https://v0-navax-design-system-guide.vercel.app/r/app-sidebar.json",
+    "https://v0-navax-design-system-guide.vercel.app/r/avatar-group.json",
+    "https://v0-navax-design-system-guide.vercel.app/r/breadcrumbs.json",
+    "https://v0-navax-design-system-guide.vercel.app/r/command-menu.json",
+    "https://v0-navax-design-system-guide.vercel.app/r/data-table.json",
+    "https://v0-navax-design-system-guide.vercel.app/r/divider.json",
+    "https://v0-navax-design-system-guide.vercel.app/r/empty-state.json",
+    "https://v0-navax-design-system-guide.vercel.app/r/feature-card.json",
+    "https://v0-navax-design-system-guide.vercel.app/r/file-upload.json",
+    "https://v0-navax-design-system-guide.vercel.app/r/form-field.json",
+    "https://v0-navax-design-system-guide.vercel.app/r/heading.json",
+    "https://v0-navax-design-system-guide.vercel.app/r/icon-button.json",
+    "https://v0-navax-design-system-guide.vercel.app/r/kbd.json",
+    "https://v0-navax-design-system-guide.vercel.app/r/navax-logo.json",
+    "https://v0-navax-design-system-guide.vercel.app/r/navbar.json",
+    "https://v0-navax-design-system-guide.vercel.app/r/page-header.json",
+    "https://v0-navax-design-system-guide.vercel.app/r/pricing-card.json",
+    "https://v0-navax-design-system-guide.vercel.app/r/progress-bar.json",
+    "https://v0-navax-design-system-guide.vercel.app/r/search-input.json",
+    "https://v0-navax-design-system-guide.vercel.app/r/section.json",
+    "https://v0-navax-design-system-guide.vercel.app/r/skeleton-card.json",
+    "https://v0-navax-design-system-guide.vercel.app/r/stack.json",
+    "https://v0-navax-design-system-guide.vercel.app/r/stat-card.json",
+    "https://v0-navax-design-system-guide.vercel.app/r/status-badge.json",
+    "https://v0-navax-design-system-guide.vercel.app/r/stepper.json",
+    "https://v0-navax-design-system-guide.vercel.app/r/tab-nav.json",
+    "https://v0-navax-design-system-guide.vercel.app/r/testimonial-card.json",
+    "https://v0-navax-design-system-guide.vercel.app/r/text.json",
+    "https://v0-navax-design-system-guide.vercel.app/r/timeline.json",
+    "https://v0-navax-design-system-guide.vercel.app/r/toggle-button-group.json",
+    "https://v0-navax-design-system-guide.vercel.app/r/user-menu.json"
+  ],
+  "files": [
+    {
+      "path": "components/ds/navax-ds-all.ts",
+      "type": "registry:ui",
+      "content": "// NAVAX Design System - All Components\n// This file is a placeholder that triggers installation of all design system components.\nexport {};\n"
+    }
+  ]
+}

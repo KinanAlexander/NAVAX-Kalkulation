@@ -1,0 +1,16 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "page-header",
+  "type": "registry:ui",
+  "title": "Page Header",
+  "description": "Page header with title, description, actions, and breadcrumb slots.",
+  "dependencies": [],
+  "registryDependencies": [],
+  "files": [
+    {
+      "path": "components/ds/page-header.tsx",
+      "type": "registry:ui",
+      "content": "import * as React from \"react\"\nimport { cn } from \"@/lib/utils\"\n\ninterface PageHeaderProps extends React.HTMLAttributes<HTMLDivElement> {\n  title: string\n  description?: string\n  actions?: React.ReactNode\n  breadcrumbs?: React.ReactNode\n}\n\nexport function PageHeader({\n  className,\n  title,\n  description,\n  actions,\n  breadcrumbs,\n  ...props\n}: PageHeaderProps) {\n  return (\n    <div className={cn(\"flex flex-col gap-4\", className)} {...props}>\n      {breadcrumbs}\n      <div className=\"flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-4\">\n        <div>\n          <h1 className=\"text-2xl font-semibold tracking-tight text-foreground text-balance\">\n            {title}\n          </h1>\n          {description && (\n            <p className=\"mt-1 text-sm text-muted-foreground\">\n              {description}\n            </p>\n          )}\n        </div>\n        {actions && (\n          <div className=\"flex items-center gap-2 shrink-0\">{actions}</div>\n        )}\n      </div>\n    </div>\n  )\n}\n"
+    }
+  ]
+}

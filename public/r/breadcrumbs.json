@@ -1,0 +1,18 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "breadcrumbs",
+  "type": "registry:ui",
+  "title": "Breadcrumbs",
+  "description": "Accessible breadcrumb navigation with chevron separators.",
+  "dependencies": [
+    "lucide-react"
+  ],
+  "registryDependencies": [],
+  "files": [
+    {
+      "path": "components/ds/breadcrumbs.tsx",
+      "type": "registry:ui",
+      "content": "import * as React from \"react\"\nimport { cn } from \"@/lib/utils\"\nimport { ChevronRight } from \"lucide-react\"\n\ninterface BreadcrumbItem {\n  label: string\n  href?: string\n}\n\ninterface BreadcrumbsProps extends React.HTMLAttributes<HTMLElement> {\n  items: BreadcrumbItem[]\n}\n\nexport function Breadcrumbs({\n  className,\n  items,\n  ...props\n}: BreadcrumbsProps) {\n  return (\n    <nav aria-label=\"Breadcrumb\" className={cn(className)} {...props}>\n      <ol className=\"flex items-center gap-1.5 text-sm\">\n        {items.map((item, index) => {\n          const isLast = index === items.length - 1\n          return (\n            <li key={index} className=\"flex items-center gap-1.5\">\n              {index > 0 && (\n                <ChevronRight\n                  className=\"size-3.5 text-muted-foreground\"\n                  aria-hidden=\"true\"\n                />\n              )}\n              {isLast || !item.href ? (\n                <span\n                  className={cn(\n                    \"font-medium\",\n                    isLast ? \"text-foreground\" : \"text-muted-foreground\"\n                  )}\n                  aria-current={isLast ? \"page\" : undefined}\n                >\n                  {item.label}\n                </span>\n              ) : (\n                <a\n                  href={item.href}\n                  className=\"text-muted-foreground transition-colors hover:text-foreground\"\n                >\n                  {item.label}\n                </a>\n              )}\n            </li>\n          )\n        })}\n      </ol>\n    </nav>\n  )\n}\n"
+    }
+  ]
+}

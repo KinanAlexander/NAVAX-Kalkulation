@@ -1,0 +1,16 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "section",
+  "type": "registry:ui",
+  "title": "Section",
+  "description": "Page section wrapper with consistent padding and optional container.",
+  "dependencies": [],
+  "registryDependencies": [],
+  "files": [
+    {
+      "path": "components/ds/section.tsx",
+      "type": "registry:ui",
+      "content": "import * as React from \"react\"\nimport { cn } from \"@/lib/utils\"\n\ninterface SectionProps extends React.HTMLAttributes<HTMLElement> {\n  container?: boolean\n}\n\nexport function Section({\n  className,\n  container = true,\n  children,\n  ...props\n}: SectionProps) {\n  return (\n    <section\n      className={cn(\"py-16 md:py-20\", className)}\n      {...props}\n    >\n      {container ? (\n        <div className=\"mx-auto max-w-6xl px-4 md:px-6\">{children}</div>\n      ) : (\n        children\n      )}\n    </section>\n  )\n}\n"
+    }
+  ]
+}
