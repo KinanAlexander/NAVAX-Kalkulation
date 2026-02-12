@@ -73,6 +73,35 @@ export function ChatInterface() {
     quoteStateRef.current = quoteState
   }, [quoteState])
 
+  // ---- Excel download trigger (used by generateExcel tool) ----
+  const triggerExcelDownload = React.useCallback(async () => {
+    setIsGenerating(true)
+    try {
+      const currentState = quoteStateRef.current
+      const res = await fetch("/api/generate-excel", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ quoteState: currentState }),
+      })
+      if (!res.ok) throw new Error("Excel-Generierung fehlgeschlagen")
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `Angebotskalkulation_${currentState.header.unternehmensname || "Entwurf"}_${new Date().toISOString().slice(0, 10)}.xlsx`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+      setQuoteState((prev) => ({ ...prev, status: "generated" }))
+      toast.success("Excel erfolgreich generiert!")
+    } catch {
+      toast.error("Fehler bei der Excel-Generierung.")
+    } finally {
+      setIsGenerating(false)
+    }
+  }, [])
+
   const demoMessagesRef = React.useRef(demoMessages)
   React.useEffect(() => {
     demoMessagesRef.current = demoMessages
@@ -249,10 +278,18 @@ export function ChatInterface() {
           }
         }
 
+        if (toolName === "generateExcel") {
+          // Schedule the Excel generation after state update completes
+          setTimeout(() => {
+            triggerExcelDownload()
+          }, 500)
+        }
+
         next.updatedAt = new Date().toISOString()
         return next
       })
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     []
   )
 
@@ -372,11 +409,14 @@ export function ChatInterface() {
     setShowPreview(false)
   }
 
-  const handleVoiceQuoteReady = React.useCallback(() => {
-    sendMessage(
-      "Kunde Alpentech Solutions GmbH in Wien moechte D365 Business Central einfuehren. 10 Essentials, 3 Premium, 15 Team Member, 5 Power BI Pro optional. EasyStarter Paket, FIBU und Warenwirtschaft Schulung, 15 Tage Implementierung, Go-Live Begleitung, PM Base. Trade365 und Intercompany Solution. Customer Service Essential. NAVAX Consulting AT, SaaS Cloud, Jaehrlich, Kostenstelle Wien, Kostentraeger Trade."
-    )
-  }, [sendMessage])
+  const handleVoiceSend = React.useCallback(
+    (text: string) => {
+      if (text.trim()) {
+        sendMessage(text.trim())
+      }
+    },
+    [sendMessage]
+  )
 
   const handleSendToSales = () => {
     const mailtoUrl = composeSalesEmail(quoteState)
@@ -560,8 +600,7 @@ export function ChatInterface() {
       <VoiceAgentOverlay
         open={showVoiceAgent}
         onClose={() => setShowVoiceAgent(false)}
-        onQuoteReady={handleVoiceQuoteReady}
-        quoteState={quoteState}
+        onSendMessage={handleVoiceSend}
       />
 
       {/* Excel Preview Dialog */}

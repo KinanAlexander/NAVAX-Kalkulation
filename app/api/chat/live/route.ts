@@ -120,6 +120,17 @@ const tools = {
       return { success: true, ...args }
     },
   }),
+
+  generateExcel: tool({
+    description:
+      "Trigger the Excel file generation and download. Call this when the user says 'generieren', 'fertig', 'Excel erstellen', or when all required fields are collected and the user confirms. This signals the frontend to automatically start the Excel download.",
+    inputSchema: z.object({
+      summary: z.string().describe("A short summary of the quote being generated, e.g. 'Angebot fuer Alpentech Solutions - D365 BC Einfuehrung'"),
+    }),
+    execute: async ({ summary }) => {
+      return { success: true, action: "generateExcel", summary }
+    },
+  }),
 }
 
 export async function POST(req: Request) {
