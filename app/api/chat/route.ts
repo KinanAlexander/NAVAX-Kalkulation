@@ -2,7 +2,6 @@ import {
   convertToModelMessages,
   streamText,
   tool,
-  validateUIMessages,
   stepCountIs,
 } from "ai"
 import { z } from "zod"
@@ -13,7 +12,7 @@ export const maxDuration = 60
 const tools = {
   setHeaderField: tool({
     description:
-      "Setzt ein Kopfdatenfeld der Angebotskalkulation. Verwende dieses Tool fuer jedes einzelne Feld das du setzen moechtest.",
+      "Setzt ein Kopfdatenfeld der Angebotskalkulation. Verwende dieses Tool fuer jedes einzelne Feld.",
     inputSchema: z.object({
       field: z
         .enum([
@@ -40,6 +39,7 @@ const tools = {
       value: z.string().describe("Wert des Feldes"),
     }),
     execute: async ({ field, value }) => {
+      console.log("[v0] setHeaderField:", field, "=", value)
       return { success: true, field, value, message: `Feld "${field}" auf "${value}" gesetzt.` }
     },
   }),
@@ -47,21 +47,21 @@ const tools = {
   addLicensePosition: tool({
     description: "Fuegt eine Lizenzposition zum Angebot hinzu.",
     inputSchema: z.object({
-      category: z
-        .string()
-        .describe("Kategorie: z.B. 'D365 Business Central', 'BC Apps', 'D365 CX', 'Power BI', 'M365', 'DCP'"),
-      product: z.string().describe("Produktname, z.B. 'Essentials', 'Premium', 'Team Member'"),
+      category: z.string().describe("Kategorie z.B. 'D365 Business Central', 'BC Apps', 'D365 CX', 'Power BI', 'M365', 'DCP'"),
+      product: z.string().describe("Produktname z.B. 'Essentials', 'Premium', 'Team Member'"),
       quantity: z.number().describe("Anzahl/Stueck"),
       unitPrice: z.number().describe("Einzelpreis in EUR"),
-      discount: z.number().default(0).describe("Rabatt in Prozent"),
-      optional: z.boolean().default(false).describe("Ob die Position optional ist"),
+      discount: z.number().nullable().describe("Rabatt in Prozent"),
+      optional: z.boolean().nullable().describe("Ob die Position optional ist"),
     }),
     execute: async ({ category, product, quantity, unitPrice, discount, optional }) => {
-      const total = quantity * unitPrice * (1 - discount / 100)
+      const d = discount ?? 0
+      const total = quantity * unitPrice * (1 - d / 100)
+      console.log("[v0] addLicensePosition:", product, total)
       return {
         success: true,
-        position: { category, product, quantity, unitPrice, discount, total, optional },
-        message: `Lizenz hinzugefuegt: ${quantity}x ${product} (${category}) = ${total.toFixed(2)} EUR`,
+        position: { category, product, quantity, unitPrice, discount: d, total, optional: optional ?? false },
+        message: `Lizenz: ${quantity}x ${product} (${category}) = ${total.toFixed(2)} EUR`,
       }
     },
   }),
@@ -69,24 +69,22 @@ const tools = {
   addServicePosition: tool({
     description: "Fuegt eine Dienstleistungsposition zum Angebot hinzu.",
     inputSchema: z.object({
-      category: z
-        .string()
-        .describe(
-          "Kategorie: z.B. 'ERP EasyStarter', 'NAVAX Packages ERP', 'DL ERP', 'DL Data Analytics', 'DL AI', 'CRM Packages', 'DL CRM', 'Projektkoordination', 'Managed Services'"
-        ),
+      category: z.string().describe("Kategorie z.B. 'ERP EasyStarter', 'NAVAX Packages ERP', 'DL ERP', 'DL Data Analytics', 'DL AI', 'CRM Packages', 'DL CRM', 'Projektkoordination', 'Managed Services'"),
       description: z.string().describe("Beschreibung der Dienstleistung"),
       unit: z.enum(["LT", "STD"]).describe("Einheit: LT (Leistungstage) oder STD (Stunden)"),
       quantity: z.number().describe("Anzahl Tage/Stunden"),
       rate: z.number().describe("Tagessatz/Stundensatz in EUR"),
-      discount: z.number().default(0).describe("Rabatt in Prozent"),
-      optional: z.boolean().default(false).describe("Ob die Position optional ist"),
+      discount: z.number().nullable().describe("Rabatt in Prozent"),
+      optional: z.boolean().nullable().describe("Ob die Position optional ist"),
     }),
     execute: async ({ category, description, unit, quantity, rate, discount, optional }) => {
-      const total = quantity * rate * (1 - discount / 100)
+      const d = discount ?? 0
+      const total = quantity * rate * (1 - d / 100)
+      console.log("[v0] addServicePosition:", description, total)
       return {
         success: true,
-        position: { category, description, unit, quantity, rate, discount, total, optional },
-        message: `DL hinzugefuegt: ${description} - ${quantity} ${unit} x ${rate} EUR = ${total.toFixed(2)} EUR`,
+        position: { category, description, unit, quantity, rate, discount: d, total, optional: optional ?? false },
+        message: `DL: ${description} - ${quantity} ${unit} x ${rate} EUR = ${total.toFixed(2)} EUR`,
       }
     },
   }),
@@ -96,15 +94,16 @@ const tools = {
     inputSchema: z.object({
       name: z.string().describe("Name der NAVAX Solution"),
       priceCategory: z.number().min(1).max(4).describe("Preiskategorie 1-4 (1=540, 2=1530, 3=2680, 4=auf Anfrage)"),
-      additionalDl: z.number().default(0).describe("Zusaetzliche DL-Tage"),
+      additionalDl: z.number().nullable().describe("Zusaetzliche DL-Tage"),
     }),
     execute: async ({ name, priceCategory, additionalDl }) => {
       const prices: Record<number, number> = { 1: 540, 2: 1530, 3: 2680, 4: 0 }
       const flatRate = prices[priceCategory] || 0
+      console.log("[v0] addSolutionPosition:", name, flatRate)
       return {
         success: true,
-        position: { name, priceCategory, flatRate, additionalDl },
-        message: `NX Solution hinzugefuegt: ${name} (Kat. ${priceCategory}) = ${flatRate > 0 ? flatRate + " EUR" : "auf Anfrage"}`,
+        position: { name, priceCategory, flatRate, additionalDl: additionalDl ?? 0 },
+        message: `NX Solution: ${name} (Kat. ${priceCategory}) = ${flatRate > 0 ? flatRate + " EUR" : "auf Anfrage"}`,
       }
     },
   }),
@@ -112,18 +111,18 @@ const tools = {
   addCustomerServicePosition: tool({
     description: "Fuegt eine NAVAX Customer Service Position hinzu.",
     inputSchema: z.object({
-      package: z
-        .string()
-        .describe("Paket: 'Essential', 'Premium', oder Zusatzservice"),
+      packageName: z.string().describe("Paket: 'Essential', 'Premium', oder Zusatzservice"),
       description: z.string().describe("Beschreibung"),
       monthlyFee: z.number().describe("Monatliche Gebuehr in EUR"),
-      quantity: z.number().default(1).describe("Anzahl"),
+      quantity: z.number().nullable().describe("Anzahl"),
     }),
-    execute: async ({ package: pkg, description, monthlyFee, quantity }) => {
+    execute: async ({ packageName, description, monthlyFee, quantity }) => {
+      const q = quantity ?? 1
+      console.log("[v0] addCustomerServicePosition:", packageName, monthlyFee * q)
       return {
         success: true,
-        position: { package: pkg, description, monthlyFee, quantity },
-        message: `CSV hinzugefuegt: ${pkg} - ${description} = ${monthlyFee * quantity} EUR/Monat`,
+        position: { package: packageName, description, monthlyFee, quantity: q },
+        message: `CSV: ${packageName} - ${description} = ${monthlyFee * q} EUR/Monat`,
       }
     },
   }),
@@ -131,79 +130,78 @@ const tools = {
   setLegalTerms: tool({
     description: "Setzt die kommerziellen Bedingungen (Legal Terms).",
     inputSchema: z.object({
-      nachlassLizenzenMs: z.number().default(0).describe("Nachlass MS-Lizenzen in %"),
-      nachlassLizenzenNavax: z.number().default(0).describe("Nachlass NAVAX-Lizenzen in %"),
-      nachlassDl: z.number().default(0).describe("Nachlass DL in %"),
-      zahlungsfrist: z.string().default("30 Tage").describe("Zahlungsfrist"),
+      nachlassLizenzenMs: z.number().nullable().describe("Nachlass MS-Lizenzen in %"),
+      nachlassLizenzenNavax: z.number().nullable().describe("Nachlass NAVAX-Lizenzen in %"),
+      nachlassDl: z.number().nullable().describe("Nachlass DL in %"),
+      zahlungsfrist: z.string().nullable().describe("Zahlungsfrist"),
     }),
     execute: async (terms) => {
+      console.log("[v0] setLegalTerms:", terms)
       return { success: true, terms, message: "Kommerzielle Bedingungen gesetzt." }
     },
   }),
 
   getQuoteSummary: tool({
-    description:
-      "Zeigt eine Zusammenfassung des aktuellen Angebotsstands. Verwende dieses Tool wenn der Nutzer den aktuellen Stand wissen moechte.",
+    description: "Zeigt eine Zusammenfassung des aktuellen Angebotsstands.",
     inputSchema: z.object({}),
     execute: async () => {
-      return {
-        success: true,
-        message: "Zusammenfassung wird angezeigt.",
-      }
+      return { success: true, message: "Zusammenfassung wird angezeigt." }
     },
   }),
 
   generateExcel: tool({
-    description:
-      "Generiert die finale Excel-Datei. Rufe dieses Tool auf wenn alle noetigen Daten gesammelt sind und der Nutzer bereit ist.",
+    description: "Generiert die finale Excel-Datei wenn alle Daten gesammelt sind.",
     inputSchema: z.object({
-      confirmGeneration: z
-        .boolean()
-        .describe("Bestaetigung dass die Excel generiert werden soll"),
+      confirmGeneration: z.boolean().describe("Bestaetigung dass die Excel generiert werden soll"),
     }),
     execute: async ({ confirmGeneration }) => {
       if (!confirmGeneration) {
         return { success: false, message: "Generierung nicht bestaetigt." }
       }
-      return {
-        success: true,
-        message: "Excel-Generierung wird gestartet...",
-        action: "GENERATE_EXCEL",
-      }
+      return { success: true, message: "Excel-Generierung wird gestartet...", action: "GENERATE_EXCEL" }
     },
   }),
-} as const
+}
 
 export async function POST(req: Request) {
-  const body = await req.json()
+  try {
+    const body = await req.json()
 
-  console.log("[v0] Chat API received body keys:", Object.keys(body))
+    console.log("[v0] Chat API body keys:", Object.keys(body))
 
-  const rawMessages = body.messages
-  const quoteState = body.quoteState
+    // Messages come from the prepareSendMessagesRequest wrapper
+    const rawMessages = body.messages
+    const quoteState = body.quoteState
 
-  if (!rawMessages || !Array.isArray(rawMessages)) {
-    return new Response("Missing messages", { status: 400 })
+    if (!rawMessages || !Array.isArray(rawMessages)) {
+      console.log("[v0] ERROR: No messages array. Body:", JSON.stringify(body).slice(0, 500))
+      return new Response(JSON.stringify({ error: "Missing messages" }), { status: 400 })
+    }
+
+    console.log("[v0] Processing", rawMessages.length, "messages")
+
+    const modelMessages = await convertToModelMessages(rawMessages)
+
+    console.log("[v0] Converted to", modelMessages.length, "model messages")
+
+    const contextPrompt = quoteState
+      ? `\n\n## AKTUELLER ANGEBOTSSTAND\n${JSON.stringify(quoteState, null, 2)}`
+      : ""
+
+    const result = streamText({
+      model: "openai/gpt-4o",
+      system: SYSTEM_PROMPT + contextPrompt,
+      messages: modelMessages,
+      stopWhen: stepCountIs(10),
+      tools,
+    })
+
+    return result.toUIMessageStreamResponse()
+  } catch (error) {
+    console.error("[v0] Chat API error:", error)
+    return new Response(
+      JSON.stringify({ error: "Internal server error", details: String(error) }),
+      { status: 500 }
+    )
   }
-
-  const messages = await validateUIMessages({
-    messages: rawMessages,
-    tools,
-  })
-
-  const contextPrompt = quoteState
-    ? `\n\n## AKTUELLER ANGEBOTSSTAND\n${JSON.stringify(quoteState, null, 2)}`
-    : ""
-
-  console.log("[v0] Streaming with", messages.length, "messages")
-
-  const result = streamText({
-    model: "openai/gpt-4o",
-    system: SYSTEM_PROMPT + contextPrompt,
-    messages: await convertToModelMessages(messages),
-    stopWhen: stepCountIs(10),
-    tools,
-  })
-
-  return result.toUIMessageStreamResponse()
 }
