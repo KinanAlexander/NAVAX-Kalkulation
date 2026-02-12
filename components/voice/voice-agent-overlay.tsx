@@ -326,9 +326,12 @@ export function VoiceAgentOverlay({
       </div>
 
       {/* Main content */}
-      <div className="flex flex-1 flex-col lg:flex-row overflow-hidden">
+      <div className="flex flex-1 min-h-0 flex-col lg:flex-row overflow-hidden">
         {/* Left: Orb + Transcript */}
-        <div className="flex flex-1 flex-col items-center justify-center gap-8 p-8">
+        <div className="flex flex-1 min-h-0 flex-col items-center overflow-y-auto scrollbar-thin gap-6 px-8 py-6">
+          {/* Top spacer to push orb towards center */}
+          <div className="flex-1 min-h-4" />
+
           {/* Orb */}
           <button
             onClick={() => {
@@ -388,7 +391,7 @@ export function VoiceAgentOverlay({
               </p>
             )}
             {phase === "complete" && (
-              <div className="mt-6">
+              <div className="mt-6 pb-4">
                 <Button
                   size="lg"
                   onClick={handleComplete}
@@ -400,6 +403,9 @@ export function VoiceAgentOverlay({
               </div>
             )}
           </div>
+
+          {/* Bottom spacer */}
+          <div className="flex-1 min-h-4" />
         </div>
 
         {/* Right: Live field fill */}
