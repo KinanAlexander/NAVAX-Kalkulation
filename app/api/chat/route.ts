@@ -20,7 +20,7 @@ export async function POST(req: Request) {
           `**Solutions:** ${quoteState.solutions.length} Position(en)`,
           `**Customer Service:** ${quoteState.customerService.length} Position(en)`,
           "",
-          "Du kannst jetzt rechts auf **\"Excel generieren\"** klicken, um die fertige Angebotskalkulation herunterzuladen.",
+          "Du kannst jetzt unten auf **\"Excel herunterladen\"** klicken, um die fertige Angebotskalkulation herunterzuladen.",
           "",
           "Oder klicke **\"Neues Angebot\"** um ein neues Angebot zu starten.",
         ].join("\n"),
@@ -111,7 +111,7 @@ export async function POST(req: Request) {
       "- Solutions: **4.210,00 EUR** (einmalig)",
       "- Customer Service: **350,00 EUR/Monat**",
       "",
-      "Alle Pflichtfelder sind ausgefuellt! Klicke rechts auf **\"Excel generieren\"** um die fertige Angebotskalkulation herunterzuladen.",
+      "Alle Pflichtfelder sind ausgefuellt! Klicke unten auf **\"Excel herunterladen\"** um die fertige Angebotskalkulation zu erhalten.",
     ].join("\n")
 
     return Response.json({ text: responseText, toolResults: demoToolResults })

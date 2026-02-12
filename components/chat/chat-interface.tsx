@@ -4,7 +4,8 @@ import * as React from "react"
 import { ChatInput } from "./chat-input"
 import { MessageBubble } from "./message-bubble"
 import { QuoteProgressPanel } from "./quote-progress-panel"
-import { Sparkles } from "lucide-react"
+import { Sparkles, Download, PanelRightOpen, X } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { createEmptyQuoteState } from "@/lib/store/quote-store"
 import type { QuoteState } from "@/lib/store/types"
 import { toast } from "sonner"
@@ -25,15 +26,14 @@ export function ChatInterface() {
   const [quoteState, setQuoteState] = React.useState<QuoteState>(createEmptyQuoteState)
   const [isLoading, setIsLoading] = React.useState(false)
   const [isGenerating, setIsGenerating] = React.useState(false)
+  const [showMobilePanel, setShowMobilePanel] = React.useState(false)
   const scrollRef = React.useRef<HTMLDivElement>(null)
 
-  // Use a ref for quoteState so sendMessage always has the latest value
   const quoteStateRef = React.useRef(quoteState)
   React.useEffect(() => {
     quoteStateRef.current = quoteState
   }, [quoteState])
 
-  // Same for messages
   const messagesRef = React.useRef(messages)
   React.useEffect(() => {
     messagesRef.current = messages
@@ -44,6 +44,13 @@ export function ChatInterface() {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight
     }
   }, [messages])
+
+  // Check if we have enough data to generate
+  const hasMinimumFields =
+    !!quoteState.header.unternehmensname &&
+    !!quoteState.header.angebotstitel &&
+    !!quoteState.header.sprache &&
+    !!quoteState.header.angebotImMandant
 
   const applyToolResults = React.useCallback(
     (toolResults: ChatMessage["toolResults"]) => {
@@ -141,7 +148,9 @@ export function ChatInterface() {
 
           if (tr.toolName === "addCustomerServicePosition") {
             const pos = result.position as Record<string, unknown>
-            const alreadyExists = next.customerService.some((c) => c.package === pos.package)
+            const alreadyExists = next.customerService.some(
+              (c) => c.package === (pos.packageName || pos.package)
+            )
             if (!alreadyExists) {
               next = {
                 ...next,
@@ -149,7 +158,7 @@ export function ChatInterface() {
                   ...next.customerService,
                   {
                     id: `csv_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-                    package: pos.package as string,
+                    package: (pos.packageName || pos.package) as string,
                     description: pos.description as string,
                     monthlyFee: pos.monthlyFee as number,
                     quantity: (pos.quantity as number) || 1,
@@ -173,7 +182,6 @@ export function ChatInterface() {
         }
 
         next.updatedAt = new Date().toISOString()
-        console.log("[v0] Updated quoteState header:", JSON.stringify(next.header))
         return next
       })
     },
@@ -195,10 +203,7 @@ export function ChatInterface() {
       setIsLoading(true)
 
       try {
-        // Use ref to get latest quoteState (avoids stale closure)
         const currentQuoteState = quoteStateRef.current
-
-        console.log("[v0] Sending quoteState header:", JSON.stringify(currentQuoteState.header))
 
         const res = await fetch("/api/chat", {
           method: "POST",
@@ -222,13 +227,12 @@ export function ChatInterface() {
         const assistantMsg: ChatMessage = {
           id: `msg_${Date.now()}_assistant`,
           role: "assistant",
-          text: data.text || "Ich konnte die Eingabe nicht verarbeiten. Bitte versuche es nochmal.",
+          text: data.text || "Ich konnte die Eingabe nicht verarbeiten.",
           toolResults: data.toolResults,
         }
 
         setMessages((prev) => [...prev, assistantMsg])
 
-        // Apply tool results to update quote state
         if (data.toolResults?.length > 0) {
           applyToolResults(data.toolResults)
         }
@@ -289,10 +293,11 @@ export function ChatInterface() {
   const handleNewQuote = () => {
     setMessages([])
     setQuoteState(createEmptyQuoteState())
+    setShowMobilePanel(false)
   }
 
   return (
-    <div className="flex flex-1 gap-0 overflow-hidden">
+    <div className="flex flex-1 gap-0 overflow-hidden relative">
       {/* Chat area */}
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Messages */}
@@ -351,13 +356,46 @@ export function ChatInterface() {
           )}
         </div>
 
+        {/* Excel generate bar -- shown when quote has data, visible on all screens */}
+        {hasMinimumFields && (
+          <div className="border-t border-border bg-muted/50 px-4 py-3 flex items-center justify-between gap-3 lg:px-8">
+            <div className="flex flex-col gap-0.5 min-w-0">
+              <span className="text-sm font-medium text-foreground truncate">
+                {quoteState.header.angebotstitel || "Angebot"}
+              </span>
+              <span className="text-xs text-muted-foreground">
+                {quoteState.licenses.length} Lizenzen, {quoteState.services.length} DL-Positionen
+              </span>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <Button
+                variant="outline"
+                size="sm"
+                className="lg:hidden"
+                onClick={() => setShowMobilePanel(true)}
+              >
+                <PanelRightOpen className="h-4 w-4 mr-1.5" />
+                Details
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleGenerateExcel}
+                disabled={isGenerating}
+              >
+                <Download className="h-4 w-4 mr-1.5" />
+                {isGenerating ? "Generiere..." : "Excel herunterladen"}
+              </Button>
+            </div>
+          </div>
+        )}
+
         {/* Input */}
         <div className="border-t border-border bg-background p-4 lg:px-8">
           <ChatInput onSend={sendMessage} onFileUpload={handleFileUpload} disabled={isLoading} />
         </div>
       </div>
 
-      {/* Progress panel - desktop only */}
+      {/* Progress panel - desktop */}
       <div className="hidden w-80 shrink-0 border-l border-border bg-background p-4 lg:block overflow-y-auto">
         <QuoteProgressPanel
           quoteState={quoteState}
@@ -366,6 +404,30 @@ export function ChatInterface() {
           onNewQuote={handleNewQuote}
         />
       </div>
+
+      {/* Progress panel - mobile overlay */}
+      {showMobilePanel && (
+        <div className="absolute inset-0 z-50 flex lg:hidden">
+          <div
+            className="absolute inset-0 bg-background/80 backdrop-blur-sm"
+            onClick={() => setShowMobilePanel(false)}
+          />
+          <div className="relative ml-auto w-80 max-w-[85vw] bg-background border-l border-border p-4 overflow-y-auto shadow-xl animate-in slide-in-from-right">
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-sm font-semibold text-foreground">Angebotsdetails</span>
+              <Button variant="ghost" size="icon" onClick={() => setShowMobilePanel(false)}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            <QuoteProgressPanel
+              quoteState={quoteState}
+              onGenerateExcel={handleGenerateExcel}
+              isGenerating={isGenerating}
+              onNewQuote={handleNewQuote}
+            />
+          </div>
+        </div>
+      )}
     </div>
   )
 }
