@@ -61,7 +61,7 @@ interface WelcomeScreenProps {
 
 export function WelcomeScreen({ onSelectAction, disabled }: WelcomeScreenProps) {
   return (
-    <div className="flex h-full flex-col items-center justify-center px-4 py-8">
+    <div className="flex min-h-full flex-col items-center justify-center px-4 py-16">
       <div className="w-full max-w-2xl flex flex-col items-center gap-8">
         {/* Hero */}
         <div className="flex flex-col items-center gap-4 text-center">
