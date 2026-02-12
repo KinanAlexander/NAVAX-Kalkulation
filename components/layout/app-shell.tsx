@@ -62,7 +62,7 @@ export function AppShell({ children }: AppShellProps) {
         {/* Logo */}
         <div
           className={cn(
-            "flex h-14 items-center border-b border-sidebar-border overflow-visible",
+            "flex h-16 items-center border-b border-sidebar-border overflow-visible pt-1",
             collapsed ? "justify-center px-1" : "justify-between px-4"
           )}
         >
