@@ -4,14 +4,16 @@ import * as React from "react"
 import { cn } from "@/lib/utils"
 import { ProgressBar } from "@/components/ds/progress-bar"
 import { Button } from "@/components/ui/button"
-import { Download, Check, Circle, Plus, Eye } from "lucide-react"
+import { Download, Check, Circle, Plus, Mail } from "lucide-react"
 import type { QuoteState } from "@/lib/store/types"
+import { composeSalesEmail } from "@/lib/email/compose-sales-email"
 
 interface QuoteProgressPanelProps {
   quoteState: QuoteState
   onGenerateExcel: () => void
   isGenerating?: boolean
   onNewQuote?: () => void
+  onSendToSales?: () => void
   className?: string
 }
 
@@ -87,6 +89,7 @@ export function QuoteProgressPanel({
   onGenerateExcel,
   isGenerating,
   onNewQuote,
+  onSendToSales,
   className,
 }: QuoteProgressPanelProps) {
   const sections = getSections(quoteState)
@@ -190,6 +193,20 @@ export function QuoteProgressPanel({
           <Download className="mr-2 h-4 w-4" />
           {isGenerating ? "Wird generiert..." : "Excel generieren"}
         </Button>
+        {hasMinimumFields && (
+          <Button
+            variant="secondary"
+            size="sm"
+            className="w-full"
+            onClick={onSendToSales || (() => {
+              const url = composeSalesEmail(quoteState)
+              window.open(url, "_blank")
+            })}
+          >
+            <Mail className="mr-2 h-4 w-4" />
+            An Sales-Support senden
+          </Button>
+        )}
         {!hasMinimumFields && (
           <p className="text-[11px] text-muted-foreground text-center leading-relaxed">
             Mindestens Unternehmensname, Titel, Sprache und Mandant erforderlich

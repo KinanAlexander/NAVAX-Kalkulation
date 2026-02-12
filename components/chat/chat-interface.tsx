@@ -6,7 +6,8 @@ import { MessageBubble } from "./message-bubble"
 import { QuoteProgressPanel } from "./quote-progress-panel"
 import { WelcomeScreen } from "./welcome-screen"
 import { ExcelPreviewDialog } from "./excel-preview-dialog"
-import { Download, PanelRightOpen, X, Eye } from "lucide-react"
+import { Download, PanelRightOpen, X, Eye, Mail } from "lucide-react"
+import { composeSalesEmail } from "@/lib/email/compose-sales-email"
 import { Button } from "@/components/ui/button"
 import { createEmptyQuoteState } from "@/lib/store/quote-store"
 import type { QuoteState } from "@/lib/store/types"
@@ -303,6 +304,13 @@ export function ChatInterface() {
     setShowPreview(false)
   }
 
+  const handleSendToSales = () => {
+    const mailtoUrl = composeSalesEmail(quoteState)
+    window.open(mailtoUrl, "_blank")
+    setQuoteState((prev) => ({ ...prev, status: "sent" }))
+    toast.success("E-Mail an Sales-Support wird geoeffnet.")
+  }
+
   const isWelcome = messages.length === 0
 
   return (
@@ -378,6 +386,14 @@ export function ChatInterface() {
                     <Download className="h-4 w-4 mr-1.5" />
                     {isGenerating ? "Generiere..." : "Excel herunterladen"}
                   </Button>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={handleSendToSales}
+                  >
+                    <Mail className="h-4 w-4 mr-1.5" />
+                    <span className="hidden sm:inline">An Sales-Support</span>
+                  </Button>
                 </div>
               </div>
             </div>
@@ -396,6 +412,7 @@ export function ChatInterface() {
             onGenerateExcel={handleGenerateExcel}
             isGenerating={isGenerating}
             onNewQuote={handleNewQuote}
+            onSendToSales={handleSendToSales}
           />
         </div>
 
@@ -420,6 +437,7 @@ export function ChatInterface() {
                 onGenerateExcel={handleGenerateExcel}
                 isGenerating={isGenerating}
                 onNewQuote={handleNewQuote}
+                onSendToSales={handleSendToSales}
               />
             </div>
           </div>
